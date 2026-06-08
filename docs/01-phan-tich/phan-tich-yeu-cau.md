@@ -14,6 +14,10 @@ Xây dựng hệ thống quản lý sản phẩm cho phép người dùng đăng
 
 ## Phân công
 
+Chi tiết nhiệm vụ, nhánh Git và kết quả cần bàn giao của từng thành viên được mô tả trong `docs/01-phan-tich/phan-cong-thanh-vien.md`.
+
+Kế hoạch tổng thể, trạng thái đã làm và các phần chưa thực hiện được mô tả trong `docs/01-phan-tich/ke-hoach-trang-thai-du-an.md`.
+
 ### Lê Văn Hậu
 
 - Product Model.
