@@ -46,6 +46,22 @@ Body:
 Authorization: Bearer access_token
 ```
 
+## Health Check
+
+Endpoint dùng để kiểm tra backend API đang chạy. Endpoint này không yêu cầu JWT token.
+
+```http
+GET /api/health/
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
 ## Category API
 
 ### Danh sách category
