@@ -12,6 +12,7 @@
 
 ## Tài liệu quan trọng
 
+- README dự án: `README.md`.
 - Kế hoạch và trạng thái dự án: `docs/01-phan-tich/ke-hoach-trang-thai-du-an.md`.
 - Phân công thành viên: `docs/01-phan-tich/phan-cong-thanh-vien.md`.
 - Changelog: `docs/CHANGELOG.md`.

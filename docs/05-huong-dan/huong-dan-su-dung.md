@@ -1,5 +1,37 @@
 # 05 - Hướng dẫn
 
+## Cấu hình môi trường
+
+Dự án dùng chung một file `.env` ở thư mục gốc thay vì đặt riêng trong `backend` hoặc `frontend`.
+
+Tạo file `.env` từ file mẫu:
+
+```bash
+cp .env.example .env
+```
+
+Frontend dùng biến có prefix `VITE_`, ví dụ:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+Backend dùng các biến `DJANGO_*`, `DB_ENGINE` và `POSTGRES_*`.
+
+Khi chạy bằng Docker Compose với PostgreSQL, dùng:
+
+```env
+DB_ENGINE=postgres
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+```
+
+Khi chạy Django trực tiếp trên máy và muốn dùng SQLite tạm thời, dùng:
+
+```env
+DB_ENGINE=sqlite
+```
+
 ## Chạy backend
 
 ```bash
@@ -11,6 +43,46 @@ Backend chạy tại:
 
 ```text
 http://127.0.0.1:8000
+```
+
+## Chạy backend bằng Docker Compose và PostgreSQL
+
+Chạy từ thư mục gốc dự án:
+
+```bash
+docker compose up --build
+```
+
+Backend chạy tại:
+
+```text
+http://127.0.0.1:8000
+```
+
+PostgreSQL trong Docker chạy ở service `db`. Dữ liệu được lưu trong volume `postgres_data`.
+
+Tạo superuser trong container backend:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+Chạy test backend trong container:
+
+```bash
+docker compose exec backend python manage.py test
+```
+
+Tắt container:
+
+```bash
+docker compose down
+```
+
+Tắt container và xóa dữ liệu PostgreSQL local:
+
+```bash
+docker compose down -v
 ```
 
 ## Chạy migration

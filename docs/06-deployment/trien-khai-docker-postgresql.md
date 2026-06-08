@@ -2,38 +2,144 @@
 
 ## Trạng thái hiện tại
 
-Phần backend CRUD đang chạy được trong môi trường dev với SQLite.
+Dự án đã có cấu hình Docker cho backend Django và PostgreSQL.
 
-Theo yêu cầu dự án, môi trường triển khai cần:
+Khi chạy bằng Docker Compose:
 
-- Docker.
-- PostgreSQL.
-- Biến môi trường cho database và secret key.
-- GitHub Actions để kiểm tra test tự động.
+- Service `db` chạy PostgreSQL.
+- Service `backend` chạy Django REST Framework.
+- Backend đọc database config từ file `.env`.
+- Backend tự chạy `python manage.py migrate` khi container khởi động.
 
-## Việc cần phối hợp với nhánh DevOps
+Frontend và GitHub Actions chưa được cấu hình trong phạm vi hiện tại.
 
-- Tạo `Dockerfile` cho backend.
-- Tạo `docker-compose.yml` gồm backend, frontend và PostgreSQL.
-- Đọc database config từ `.env`.
-- Không hardcode `SECRET_KEY`, `DEBUG`, database username/password trong source code.
-- Chạy migration khi container backend khởi động.
+Các file chính:
 
-## Biến môi trường đề xuất
+- `docker-compose.yml`
+- `.env.example`
+- `backend/Dockerfile`
+- `backend/entrypoint.sh`
+- `backend/product_management/settings.py`
+
+## Tạo file môi trường
+
+Docker Compose đã có giá trị mặc định để chạy môi trường dev. Tuy nhiên nên tạo file `.env` từ file mẫu để đổi secret key, password database hoặc port PostgreSQL khi cần.
+
+Copy file mẫu:
+
+```bash
+cp .env.example .env
+```
+
+Trên Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Nội dung chính:
 
 ```env
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
+DB_ENGINE=postgres
 POSTGRES_DB=product_management
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
+VITE_API_URL=http://localhost:8000/api
 ```
 
-## Kiểm tra trước khi merge
+Khi chạy bằng Docker, `POSTGRES_HOST` phải là `db` vì backend kết nối đến service PostgreSQL trong Docker network. Nếu chạy Django trực tiếp trên máy và PostgreSQL cũng publish ra máy host, có thể đổi `POSTGRES_HOST=localhost`.
+
+## Chạy Docker Compose
+
+Chạy từ thư mục gốc dự án:
 
 ```bash
-cd backend
-./venv/bin/python manage.py test
+docker compose up --build -d
 ```
+
+Kiểm tra container:
+
+```bash
+docker compose ps
+```
+
+Xem log backend:
+
+```bash
+docker compose logs backend -f
+```
+
+Backend chạy tại:
+
+```text
+http://127.0.0.1:8000
+```
+
+PostgreSQL được publish ra máy host tại:
+
+```text
+localhost:5432
+```
+
+## Migration
+
+Backend container tự chạy migration trong `backend/entrypoint.sh` khi khởi động:
+
+```bash
+python manage.py migrate
+```
+
+Nếu cần chạy migration thủ công:
+
+```bash
+docker compose exec backend python manage.py migrate
+```
+
+## Tạo user để test JWT
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+Sau đó lấy token:
+
+```http
+POST http://127.0.0.1:8000/api/token/
+```
+
+Body:
+
+```json
+{
+  "username": "your_username",
+  "password": "your_password"
+}
+```
+
+## Chạy test trong Docker
+
+```bash
+docker compose exec backend python manage.py test
+```
+
+## Dừng container
+
+```bash
+docker compose down
+```
+
+Nếu muốn xóa luôn dữ liệu PostgreSQL local:
+
+```bash
+docker compose down -v
+```
+
+## Việc còn lại
+
+- Thêm service frontend vào `docker-compose.yml` nếu nhóm muốn chạy React bằng Docker.
+- Thêm GitHub Actions để chạy test tự động khi push hoặc mở Pull Request.
