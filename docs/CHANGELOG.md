@@ -6,6 +6,9 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 
 ### Added
 
+- Thêm endpoint health check `GET /api/health/` không yêu cầu JWT.
+- Thêm test cho endpoint health check.
+- Thêm `.gitattributes` để giữ shell script dùng LF trên Windows.
 - Cập nhật README dự án đầy đủ với tổng quan, công nghệ, cấu trúc thư mục, hướng dẫn chạy Docker/PostgreSQL, API chính, test và quy trình Git.
 - Thêm `.env.example` dùng chung ở thư mục gốc dự án.
 - Cấu hình backend đọc `.env` từ thư mục gốc bằng `python-dotenv`.
@@ -36,6 +39,7 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 
 ### Changed
 
+- Cập nhật backend Dockerfile để normalize CRLF trong `entrypoint.sh` và chạy entrypoint qua `sh`.
 - Xóa `frontend/.env.example` để tránh mỗi folder có một file env riêng.
 - Chuyển `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` và database config sang biến môi trường.
 - Chuẩn hóa `DB_ENGINE` để hỗ trợ cả `postgres` và `postgresql`.

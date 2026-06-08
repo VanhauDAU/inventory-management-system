@@ -107,6 +107,17 @@ Chạy từ thư mục gốc dự án:
 docker compose up --build -d
 ```
 
+Trên Windows cũng chạy lệnh này từ thư mục gốc, nơi có file `docker-compose.yml`, không chạy trong thư mục `backend`.
+
+Nếu backend báo lỗi `exec /app/entrypoint.sh: no such file or directory`, rebuild không dùng cache:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d
+```
+
+Lỗi này thường do file `.sh` bị chuyển line ending sang CRLF trên Windows. Dự án đã cấu hình `.gitattributes` và Dockerfile để tự xử lý LF/CRLF.
+
 Kiểm tra container:
 
 ```bash
@@ -183,6 +194,20 @@ Authorization: Bearer access_token
 ```
 
 ## API chính
+
+### Health Check
+
+```http
+GET /api/health/
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
 
 ### Authentication
 
