@@ -10,7 +10,15 @@
 - `06-deployment`: Ghi chú Docker, PostgreSQL, CI/CD và triển khai.
 - `07-algorithms`: Search, filter, pagination và các xử lý nghiệp vụ.
 
+## Tài liệu quan trọng
+
+- Kế hoạch và trạng thái dự án: `docs/01-phan-tich/ke-hoach-trang-thai-du-an.md`.
+- Phân công thành viên: `docs/01-phan-tich/phan-cong-thanh-vien.md`.
+- Changelog: `docs/CHANGELOG.md`.
+
 ## Trạng thái phần backend của Lê Văn Hậu
+
+Tài liệu phân công chi tiết: `docs/01-phan-tich/phan-cong-thanh-vien.md`.
 
 Đã hoàn thiện mức cơ bản:
 
