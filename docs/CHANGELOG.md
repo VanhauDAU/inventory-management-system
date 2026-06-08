@@ -13,6 +13,10 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 - Thêm Docker Compose cho backend Django và PostgreSQL.
 - Thêm `backend/Dockerfile` và `backend/entrypoint.sh`.
 - Backend container tự chạy migration trước khi khởi động server.
+- Thêm GitHub Actions workflow tại `.github/workflows/ci.yml`.
+- CI chạy backend test với PostgreSQL service.
+- CI chạy frontend build bằng Vite.
+- Thêm `.gitattributes` để giữ line ending LF cho shell script và workflow YAML.
 - Tạo nhánh `dev` làm nhánh tích hợp chung.
 - Triển khai CRUD API cho Product.
 - Triển khai CRUD API cho Category.
@@ -67,6 +71,8 @@ cd backend
 - Backend container kết nối PostgreSQL, chạy migration và khởi động Django thành công.
 - Đã chạy `docker compose exec backend python manage.py test`: `5 tests OK`.
 - Đã kiểm tra `GET /api/products/` trên Docker backend trả `401 Unauthorized` đúng vì API yêu cầu JWT.
+- Đã chạy `npm ci` trong frontend thành công.
+- Đã chạy `npm run build` trong frontend thành công.
 
 ### Pending
 
@@ -74,5 +80,5 @@ cd backend
 - Kiểm thử và mở rộng phần auth/search/filter/pagination cho nhánh `feature/auth-api`.
 - Bổ sung frontend service vào Docker Compose nếu nhóm muốn chạy toàn bộ hệ thống bằng một lệnh.
 - Hoàn thiện frontend React.
-- Thêm GitHub Actions CI/CD.
+- Mở rộng GitHub Actions thêm lint, coverage hoặc deploy nếu nhóm cần.
 - Export Postman collection nếu cần nộp.
