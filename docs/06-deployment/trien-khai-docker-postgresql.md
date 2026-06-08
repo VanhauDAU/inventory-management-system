@@ -13,11 +13,7 @@ Khi chạy bằng Docker Compose:
 
 Frontend và GitHub Actions chưa được cấu hình trong phạm vi hiện tại.
 
-- Tạo `Dockerfile` cho backend.
-- Tạo `docker-compose.yml` gồm backend, frontend và PostgreSQL.
-- Đọc database config từ file `.env` dùng chung ở thư mục gốc.
-- Không hardcode `SECRET_KEY`, `DEBUG`, database username/password trong source code.
-- Chạy migration khi container backend khởi động.
+Các file chính:
 
 - `docker-compose.yml`
 - `.env.example`
@@ -46,8 +42,8 @@ Nội dung chính:
 ```env
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
-DB_ENGINE=postgresql
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
+DB_ENGINE=postgres
 POSTGRES_DB=product_management
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
@@ -56,8 +52,94 @@ POSTGRES_PORT=5432
 VITE_API_URL=http://localhost:8000/api
 ```
 
+Khi chạy bằng Docker, `POSTGRES_HOST` phải là `db` vì backend kết nối đến service PostgreSQL trong Docker network. Nếu chạy Django trực tiếp trên máy và PostgreSQL cũng publish ra máy host, có thể đổi `POSTGRES_HOST=localhost`.
+
+## Chạy Docker Compose
+
+Chạy từ thư mục gốc dự án:
+
+```bash
+docker compose up --build -d
+```
+
+Kiểm tra container:
+
+```bash
+docker compose ps
+```
+
+Xem log backend:
+
+```bash
+docker compose logs backend -f
+```
+
+Backend chạy tại:
+
+```text
+http://127.0.0.1:8000
+```
+
+PostgreSQL được publish ra máy host tại:
+
+```text
+localhost:5432
+```
+
+## Migration
+
+Backend container tự chạy migration trong `backend/entrypoint.sh` khi khởi động:
+
+```bash
+python manage.py migrate
+```
+
+Nếu cần chạy migration thủ công:
+
+```bash
+docker compose exec backend python manage.py migrate
+```
+
+## Tạo user để test JWT
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+Sau đó lấy token:
+
+```http
+POST http://127.0.0.1:8000/api/token/
+```
+
+Body:
+
+```json
+{
+  "username": "your_username",
+  "password": "your_password"
+}
+```
+
+## Chạy test trong Docker
+
+```bash
+docker compose exec backend python manage.py test
+```
+
+## Dừng container
+
+```bash
+docker compose down
+```
+
 Nếu muốn xóa luôn dữ liệu PostgreSQL local:
 
 ```bash
 docker compose down -v
 ```
+
+## Việc còn lại
+
+- Thêm service frontend vào `docker-compose.yml` nếu nhóm muốn chạy React bằng Docker.
+- Thêm GitHub Actions để chạy test tự động khi push hoặc mở Pull Request.

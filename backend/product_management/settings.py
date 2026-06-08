@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'django_filters',
     'products',
     'categories',
-    'accounts',
 ]
 
 REST_FRAMEWORK = {
@@ -100,7 +99,9 @@ WSGI_APPLICATION = 'product_management.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-if os.getenv("DB_ENGINE") == "postgres":
+db_engine = os.getenv("DB_ENGINE", "sqlite").lower()
+
+if db_engine in ("postgres", "postgresql"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
