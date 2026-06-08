@@ -10,7 +10,7 @@ Dự án hiện tập trung vào backend API quản lý sản phẩm/danh mục,
 - Backend: Django 4.2, Django REST Framework.
 - Authentication: JWT với `djangorestframework-simplejwt`.
 - Database: PostgreSQL trong Docker, SQLite tùy chọn cho local dev.
-- DevOps: Docker, Docker Compose.
+- DevOps: Docker, Docker Compose, GitHub Actions.
 - Testing: Django test framework, DRF API test client.
 
 ## Cấu trúc thư mục
@@ -53,6 +53,7 @@ product-management-system/
 - Search, filter, ordering và pagination cơ bản cho Product API.
 - PostgreSQL chạy bằng Docker Compose.
 - Backend container tự chạy migration khi khởi động.
+- GitHub Actions CI chạy backend test với PostgreSQL và build frontend.
 - Test backend cho Product/Category API.
 - Tài liệu database, API, hướng dẫn chạy, deployment và kế hoạch dự án.
 
@@ -60,7 +61,6 @@ Chưa hoàn thiện:
 
 - Frontend React đầy đủ.
 - Frontend service trong Docker Compose.
-- GitHub Actions CI/CD.
 - Filter nâng cao theo khoảng giá và tồn kho.
 - Validation nghiệp vụ cho `price` và `quantity`.
 - Postman collection export.
@@ -264,6 +264,34 @@ Kết quả kiểm tra gần nhất:
 
 ```text
 5 tests OK
+```
+
+## CI bằng GitHub Actions
+
+Workflow CI nằm tại:
+
+```text
+.github/workflows/ci.yml
+```
+
+CI tự chạy khi:
+
+- Push lên `main`, `dev` hoặc các nhánh `feature/**`.
+- Tạo hoặc cập nhật Pull Request vào `dev` hoặc `main`.
+
+Các job hiện có:
+
+- `backend-tests`: cài Python dependencies, chạy Django check, chạy migration và test backend với PostgreSQL service.
+- `frontend-build`: cài frontend dependencies bằng `npm ci` và chạy `npm run build`.
+
+Kiểm tra local tương đương trước khi push:
+
+```bash
+docker compose up --build -d
+docker compose exec backend python manage.py test
+cd frontend
+npm ci
+npm run build
 ```
 
 ## Quy trình Git đề xuất

@@ -11,7 +11,7 @@ Khi chạy bằng Docker Compose:
 - Backend đọc database config từ file `.env`.
 - Backend tự chạy `python manage.py migrate` khi container khởi động.
 
-Frontend và GitHub Actions chưa được cấu hình trong phạm vi hiện tại.
+GitHub Actions đã được cấu hình để chạy backend test với PostgreSQL service và build frontend.
 
 Các file chính:
 
@@ -20,6 +20,7 @@ Các file chính:
 - `backend/Dockerfile`
 - `backend/entrypoint.sh`
 - `backend/product_management/settings.py`
+- `.github/workflows/ci.yml`
 
 ## Tạo file môi trường
 
@@ -142,6 +143,23 @@ Body:
 docker compose exec backend python manage.py test
 ```
 
+## GitHub Actions CI
+
+Workflow CI nằm tại:
+
+```text
+.github/workflows/ci.yml
+```
+
+CI tự chạy khi push lên `main`, `dev`, `feature/**` hoặc khi tạo Pull Request vào `dev`/`main`.
+
+Các job hiện có:
+
+- `backend-tests`: chạy trên Ubuntu, dùng PostgreSQL 16 service, cài dependency Python, chạy `python manage.py check`, `python manage.py migrate --noinput` và `python manage.py test`.
+- `frontend-build`: cài dependency frontend bằng `npm ci` và chạy `npm run build`.
+
+Trong CI, backend kết nối PostgreSQL qua `POSTGRES_HOST=127.0.0.1` vì database chạy dưới dạng GitHub Actions service. Khi chạy bằng Docker Compose local, backend vẫn dùng `POSTGRES_HOST=db`.
+
 ## Dừng container
 
 ```bash
@@ -157,4 +175,4 @@ docker compose down -v
 ## Việc còn lại
 
 - Thêm service frontend vào `docker-compose.yml` nếu nhóm muốn chạy React bằng Docker.
-- Thêm GitHub Actions để chạy test tự động khi push hoặc mở Pull Request.
+- Mở rộng GitHub Actions thêm lint, coverage hoặc deploy nếu nhóm cần.
