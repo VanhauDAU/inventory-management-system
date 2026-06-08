@@ -2,38 +2,113 @@
 
 ## Trạng thái hiện tại
 
-Phần backend CRUD đang chạy được trong môi trường dev với SQLite.
+Dự án đã có cấu hình Docker cho backend Django và PostgreSQL.
 
-Theo yêu cầu dự án, môi trường triển khai cần:
+Khi chạy bằng Docker Compose:
 
-- Docker.
-- PostgreSQL.
-- Biến môi trường cho database và secret key.
-- GitHub Actions để kiểm tra test tự động.
+- Service `db` chạy PostgreSQL.
+- Service `backend` chạy Django REST Framework.
+- Backend đọc database config từ file `.env`.
+- Backend tự chạy `python manage.py migrate` khi container khởi động.
 
-## Việc cần phối hợp với nhánh DevOps
+Frontend và GitHub Actions chưa được cấu hình trong phạm vi hiện tại.
 
-- Tạo `Dockerfile` cho backend.
-- Tạo `docker-compose.yml` gồm backend, frontend và PostgreSQL.
-- Đọc database config từ `.env`.
-- Không hardcode `SECRET_KEY`, `DEBUG`, database username/password trong source code.
-- Chạy migration khi container backend khởi động.
+## File cấu hình liên quan
 
-## Biến môi trường đề xuất
+- `docker-compose.yml`
+- `.env.example`
+- `backend/Dockerfile`
+- `backend/entrypoint.sh`
+- `backend/product_management/settings.py`
+
+## Tạo file môi trường
+
+Docker Compose đã có giá trị mặc định để chạy môi trường dev. Tuy nhiên nên tạo file `.env` từ file mẫu để đổi secret key, password database hoặc port PostgreSQL khi cần.
+
+Copy file mẫu:
+
+```bash
+cp .env.example .env
+```
+
+Trên Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Nội dung chính:
 
 ```env
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend
+
+DB_ENGINE=postgres
 POSTGRES_DB=product_management
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
+POSTGRES_HOST_PORT=5432
 ```
 
-## Kiểm tra trước khi merge
+## Chạy backend với PostgreSQL bằng Docker
+
+Tại thư mục gốc dự án:
 
 ```bash
-cd backend
-./venv/bin/python manage.py test
+docker compose up --build
+```
+
+Backend chạy tại:
+
+```text
+http://127.0.0.1:8000
+```
+
+PostgreSQL chạy trong container `product_management_db`.
+
+## Chạy migration thủ công nếu cần
+
+Thông thường migration đã chạy tự động khi backend khởi động. Nếu cần chạy lại:
+
+```bash
+docker compose exec backend python manage.py migrate
+```
+
+## Tạo superuser trong Docker
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+## Kiểm tra backend kết nối PostgreSQL
+
+```bash
+docker compose exec backend python manage.py dbshell
+```
+
+Hoặc kiểm tra migration:
+
+```bash
+docker compose exec backend python manage.py showmigrations
+```
+
+## Chạy test backend trong Docker
+
+```bash
+docker compose exec backend python manage.py test
+```
+
+## Dừng containerx`
+
+```bash
+docker compose down
+```
+
+Nếu muốn xóa luôn dữ liệu PostgreSQL local:
+
+```bash
+docker compose down -v
 ```
