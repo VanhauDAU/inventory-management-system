@@ -63,6 +63,21 @@ Chạy từ thư mục gốc dự án:
 docker compose up --build -d
 ```
 
+Trên Windows, cần chạy từ thư mục gốc dự án, nơi có file `docker-compose.yml`. Không chạy trong thư mục `backend`.
+
+Nếu gặp lỗi:
+
+```text
+exec /app/entrypoint.sh: no such file or directory
+```
+
+Nguyên nhân thường là file `entrypoint.sh` bị chuyển line ending từ LF sang CRLF. Dự án đã có `.gitattributes` và Dockerfile tự normalize line ending. Nếu vẫn lỗi do Docker cache cũ, chạy:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d
+```
+
 Kiểm tra container:
 
 ```bash
