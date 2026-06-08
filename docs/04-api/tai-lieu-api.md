@@ -62,6 +62,26 @@ Response:
 }
 ```
 
+## Swagger/OpenAPI
+
+Tài liệu API tự động từ Django REST Framework:
+
+```http
+GET /api/docs/
+```
+
+OpenAPI schema:
+
+```http
+GET /api/schema/
+```
+
+ReDoc:
+
+```http
+GET /api/redoc/
+```
+
 ## Category API
 
 ### Danh sách category

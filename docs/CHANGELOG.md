@@ -6,6 +6,10 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 
 ### Added
 
+- Thêm Swagger/OpenAPI bằng `drf-spectacular`.
+- Thêm endpoint tài liệu API: `/api/docs/`, `/api/schema/`, `/api/redoc/`.
+- Thêm CORS middleware để frontend `localhost:3000` gọi được backend `localhost:8000`.
+- Thêm biến `CORS_ALLOWED_ORIGINS` vào env mẫu.
 - Thêm endpoint health check `GET /api/health/` không yêu cầu JWT.
 - Thêm test cho endpoint health check.
 - Thêm `.gitattributes` để giữ shell script dùng LF trên Windows.

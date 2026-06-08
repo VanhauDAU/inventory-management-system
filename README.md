@@ -81,6 +81,7 @@ Ví dụ cấu hình khi chạy Docker Compose với PostgreSQL:
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
 DB_ENGINE=postgres
 POSTGRES_DB=product_management
@@ -207,6 +208,14 @@ Response:
 {
   "status": "ok"
 }
+```
+
+### Swagger/OpenAPI
+
+```http
+GET /api/docs/
+GET /api/schema/
+GET /api/redoc/
 ```
 
 ### Authentication
