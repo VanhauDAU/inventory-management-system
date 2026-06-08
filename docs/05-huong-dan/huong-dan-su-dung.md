@@ -1,5 +1,23 @@
 # 05 - Hướng dẫn
 
+## Cấu hình môi trường
+
+Dự án dùng chung một file `.env` ở thư mục gốc thay vì đặt riêng trong `backend` hoặc `frontend`.
+
+Tạo file `.env` từ file mẫu:
+
+```bash
+cp .env.example .env
+```
+
+Frontend dùng biến có prefix `VITE_`, ví dụ:
+
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+Backend dùng các biến `DJANGO_*`, `DB_ENGINE` và `POSTGRES_*`.
+
 ## Chạy backend
 
 ```bash

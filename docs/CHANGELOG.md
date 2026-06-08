@@ -6,6 +6,9 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 
 ### Added
 
+- Thêm `.env.example` dùng chung ở thư mục gốc dự án.
+- Cấu hình backend đọc `.env` từ thư mục gốc bằng `python-dotenv`.
+- Cấu hình frontend Vite đọc env từ thư mục gốc bằng `envDir`.
 - Tạo nhánh `dev` làm nhánh tích hợp chung.
 - Triển khai CRUD API cho Product.
 - Triển khai CRUD API cho Category.
@@ -29,6 +32,8 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 
 ### Changed
 
+- Xóa `frontend/.env.example` để tránh mỗi folder có một file env riêng.
+- Chuyển `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` và database config sang biến môi trường.
 - Đổi tên các file docs từ `README.md` sang tên cụ thể hơn:
   - `phan-tich-yeu-cau.md`
   - `tong-quan-he-thong.md`

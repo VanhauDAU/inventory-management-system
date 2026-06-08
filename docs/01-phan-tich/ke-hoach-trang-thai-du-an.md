@@ -46,7 +46,7 @@ Product Management System là hệ thống quản lý sản phẩm gồm fronten
 - Dockerfile cho backend.
 - Dockerfile cho frontend nếu cần.
 - Docker Compose gồm backend, frontend và PostgreSQL.
-- File `.env.example`.
+- File `.env.example` dùng chung ở thư mục gốc.
 - Cấu hình Django đọc biến môi trường.
 - GitHub Actions chạy test tự động.
 - Hướng dẫn chạy dự án bằng Docker.
@@ -122,6 +122,13 @@ Product Management System là hệ thống quản lý sản phẩm gồm fronten
 - Đã có hướng dẫn test API bằng Postman.
 - Đã có tài liệu phân công thành viên.
 
+### Environment config
+
+- Đã tạo `.env.example` ở thư mục gốc.
+- Backend đọc `.env` từ thư mục gốc bằng `python-dotenv`.
+- Frontend Vite đọc env từ thư mục gốc bằng `envDir: "../"`.
+- Không cần đặt file `.env` riêng trong từng folder backend/frontend.
+
 ## Chưa thực hiện
 
 ### Backend
@@ -146,7 +153,7 @@ Product Management System là hệ thống quản lý sản phẩm gồm fronten
 ### Database và Docker
 
 - Backend hiện vẫn dùng SQLite trong môi trường dev.
-- Chưa cấu hình PostgreSQL trong `settings.py` bằng biến môi trường.
+- Đã có cấu hình chọn SQLite hoặc PostgreSQL bằng biến `DB_ENGINE`.
 - Chưa có Docker Compose hoàn chỉnh cho toàn hệ thống.
 - Chưa có script seed dữ liệu mẫu.
 
