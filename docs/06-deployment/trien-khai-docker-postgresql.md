@@ -13,7 +13,11 @@ Khi chạy bằng Docker Compose:
 
 Frontend và GitHub Actions chưa được cấu hình trong phạm vi hiện tại.
 
-## File cấu hình liên quan
+- Tạo `Dockerfile` cho backend.
+- Tạo `docker-compose.yml` gồm backend, frontend và PostgreSQL.
+- Đọc database config từ file `.env` dùng chung ở thư mục gốc.
+- Không hardcode `SECRET_KEY`, `DEBUG`, database username/password trong source code.
+- Chạy migration khi container backend khởi động.
 
 - `docker-compose.yml`
 - `.env.example`
@@ -42,69 +46,14 @@ Nội dung chính:
 ```env
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend
-
-DB_ENGINE=postgres
+DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+DB_ENGINE=postgresql
 POSTGRES_DB=product_management
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
-POSTGRES_HOST_PORT=5432
-```
-
-## Chạy backend với PostgreSQL bằng Docker
-
-Tại thư mục gốc dự án:
-
-```bash
-docker compose up --build
-```
-
-Backend chạy tại:
-
-```text
-http://127.0.0.1:8000
-```
-
-PostgreSQL chạy trong container `product_management_db`.
-
-## Chạy migration thủ công nếu cần
-
-Thông thường migration đã chạy tự động khi backend khởi động. Nếu cần chạy lại:
-
-```bash
-docker compose exec backend python manage.py migrate
-```
-
-## Tạo superuser trong Docker
-
-```bash
-docker compose exec backend python manage.py createsuperuser
-```
-
-## Kiểm tra backend kết nối PostgreSQL
-
-```bash
-docker compose exec backend python manage.py dbshell
-```
-
-Hoặc kiểm tra migration:
-
-```bash
-docker compose exec backend python manage.py showmigrations
-```
-
-## Chạy test backend trong Docker
-
-```bash
-docker compose exec backend python manage.py test
-```
-
-## Dừng containerx`
-
-```bash
-docker compose down
+VITE_API_URL=http://localhost:8000/api
 ```
 
 Nếu muốn xóa luôn dữ liệu PostgreSQL local:
