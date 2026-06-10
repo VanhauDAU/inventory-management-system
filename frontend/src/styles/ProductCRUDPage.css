@@ -116,6 +116,210 @@
   color: white;
 }
 
+.btn-light {
+  background: #ffffff;
+  color: #27364d;
+  border: 1px solid #ccd7e4;
+}
+
+.btn-small {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.stat-card {
+  border: 1px solid #dce4ee;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.stat-card span,
+.field span {
+  display: block;
+  color: #61708a;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 0.5rem;
+  color: #101828;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.stat-card.warning {
+  border-color: #f1cf8d;
+}
+
+.stat-card.danger {
+  border-color: #efaaa5;
+}
+
+.product-panel {
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #e5ebf2;
+  padding: 1.1rem;
+}
+
+.panel-header h2 {
+  margin: 0 0 0.35rem;
+  color: #111827;
+  font-size: 1.15rem;
+}
+
+.panel-header p {
+  margin: 0;
+  color: #66758d;
+  font-size: 0.9rem;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 0.7fr));
+  gap: 0.75rem;
+  padding: 1.1rem;
+  border-bottom: 1px solid #e5ebf2;
+}
+
+.field {
+  min-width: 0;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 0.4rem;
+  border: 1px solid #cbd6e3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  padding: 0 0.75rem;
+  outline: none;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.14);
+}
+
+.list-error {
+  margin: 0.9rem 1.1rem 0;
+  border: 1px solid #f0c4c0;
+  border-radius: 6px;
+  background: #fff4f3;
+  color: #9d2d26;
+  padding: 0.75rem;
+  line-height: 1.5;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.product-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.product-table th,
+.product-table td {
+  padding: 0.9rem 1.1rem;
+  border-bottom: 1px solid #edf1f6;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.product-table th {
+  color: #59677e;
+  background: #fbfcfe;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.product-name {
+  color: #101828;
+  font-weight: 800;
+}
+
+.product-description {
+  max-width: 420px;
+  margin-top: 0.25rem;
+  color: #68778e;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.badge.success {
+  background: #e9f7ef;
+  color: #17683a;
+}
+
+.badge.warning {
+  background: #fff6df;
+  color: #806018;
+}
+
+.badge.danger {
+  background: #ffeceb;
+  color: #a7362f;
+}
+
+.state-cell {
+  height: 120px;
+  color: #68778e;
+  text-align: center;
+}
+
+.row-actions,
+.pagination-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  color: #5f6d83;
+}
+
 @media (max-width: 640px) {
   .crud-page {
     padding: 1rem;
@@ -127,6 +331,22 @@
   }
 
   .crud-header .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stats-grid,
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-header,
+  .pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pagination-actions .btn {
     width: 100%;
     justify-content: center;
   }
