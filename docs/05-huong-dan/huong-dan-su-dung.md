@@ -1,5 +1,6 @@
 # 05 - Hướng dẫn
 
+<<<<<<< HEAD
 ## Cấu hình môi trường
 
 Dự án dùng chung một file `.env` ở thư mục gốc thay vì đặt riêng trong `backend` hoặc `frontend`.
@@ -32,6 +33,8 @@ Khi chạy Django trực tiếp trên máy và muốn dùng SQLite tạm thời,
 DB_ENGINE=sqlite
 ```
 
+=======
+>>>>>>> feature/frontend-crud
 ## Chạy backend
 
 ```bash
@@ -45,6 +48,7 @@ Backend chạy tại:
 http://127.0.0.1:8000
 ```
 
+<<<<<<< HEAD
 ## Chạy backend bằng Docker Compose và PostgreSQL
 
 Chạy từ thư mục gốc dự án:
@@ -85,6 +89,8 @@ Tắt container và xóa dữ liệu PostgreSQL local:
 docker compose down -v
 ```
 
+=======
+>>>>>>> feature/frontend-crud
 ## Chạy migration
 
 ```bash

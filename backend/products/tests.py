@@ -38,8 +38,11 @@ class ProductAPITests(APITestCase):
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         product_id = create_response.data["id"]
         self.assertEqual(create_response.data["category_detail"]["name"], "Electronics")
+<<<<<<< HEAD
         self.assertEqual(create_response.data["price"], "49.99")
         self.assertTrue(create_response.data["sku"].startswith("PRD-"))
+=======
+>>>>>>> feature/frontend-crud
 
         list_response = self.client.get("/api/products/?search=Keyboard")
         self.assertEqual(list_response.status_code, status.HTTP_200_OK)
@@ -61,18 +64,30 @@ class ProductAPITests(APITestCase):
         self.client.force_authenticate(user=self.user)
         other_category = Category.objects.create(name="Stationery")
         Product.objects.create(
+<<<<<<< HEAD
             sku="MOUSE-001",
             name="Mouse",
             description="Wireless mouse",
             selling_price="19.99",
+=======
+            name="Mouse",
+            description="Wireless mouse",
+            price="19.99",
+>>>>>>> feature/frontend-crud
             quantity=5,
             category=self.category,
         )
         Product.objects.create(
+<<<<<<< HEAD
             sku="NOTEBOOK-001",
             name="Notebook",
             description="A5 notebook",
             selling_price="3.50",
+=======
+            name="Notebook",
+            description="A5 notebook",
+            price="3.50",
+>>>>>>> feature/frontend-crud
             quantity=20,
             category=other_category,
         )
@@ -82,6 +97,7 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Mouse")
+<<<<<<< HEAD
 
 
 class HealthCheckAPITests(APITestCase):
@@ -90,3 +106,5 @@ class HealthCheckAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {"status": "ok"})
+=======
+>>>>>>> feature/frontend-crud

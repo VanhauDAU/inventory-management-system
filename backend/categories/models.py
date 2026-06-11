@@ -1,5 +1,6 @@
 from django.db import models
 
+<<<<<<< HEAD
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -22,3 +23,11 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+=======
+# Create your models here.
+class Category(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+>>>>>>> feature/frontend-crud

@@ -1,5 +1,6 @@
 # 03 - Database
 
+<<<<<<< HEAD
 ## Tổng quan
 
 Database PostgreSQL hiện gồm sáu bảng nghiệp vụ chính:
@@ -16,11 +17,17 @@ Các bảng user và permission tiếp tục dùng hệ thống authentication m
 ## Categories
 
 Model: `backend/categories/models.py`
+=======
+## Model Category
+
+File: `backend/categories/models.py`
+>>>>>>> feature/frontend-crud
 
 | Field | Kiểu dữ liệu | Ghi chú |
 | --- | --- | --- |
 | id | BigAutoField | Khóa chính |
 | name | CharField(100) | Tên danh mục |
+<<<<<<< HEAD
 | description | TextField | Mô tả |
 | parent | ForeignKey(Category) | Danh mục cha, có thể rỗng |
 | is_active | BooleanField | Trạng thái hoạt động |
@@ -32,10 +39,17 @@ Quan hệ `parent` tạo cây danh mục cha-con. Khi danh mục cha bị xóa, 
 ## Suppliers
 
 Model: `backend/suppliers/models.py`
+=======
+
+## Model Product
+
+File: `backend/products/models.py`
+>>>>>>> feature/frontend-crud
 
 | Field | Kiểu dữ liệu | Ghi chú |
 | --- | --- | --- |
 | id | BigAutoField | Khóa chính |
+<<<<<<< HEAD
 | name | CharField(255) | Tên nhà cung cấp |
 | contact_name | CharField(255) | Người liên hệ |
 | phone | CharField(30) | Số điện thoại |
@@ -148,3 +162,32 @@ Chạy migration trong Docker:
 docker compose up --build -d
 docker compose exec backend python manage.py showmigrations
 ```
+=======
+| name | CharField(255) | Tên sản phẩm |
+| description | TextField | Mô tả, có thể rỗng |
+| price | DecimalField(10, 2) | Giá sản phẩm |
+| quantity | IntegerField | Số lượng tồn kho |
+| category | ForeignKey(Category) | Danh mục sản phẩm |
+| created_at | DateTimeField | Ngày tạo |
+| updated_at | DateTimeField | Ngày cập nhật |
+
+## Quan hệ dữ liệu
+
+- Một `Category` có nhiều `Product`.
+- Một `Product` thuộc về một `Category`.
+- Khi xóa `Category`, các `Product` thuộc category đó cũng bị xóa do `on_delete=models.CASCADE`.
+
+## Trạng thái hiện tại
+
+Đã có migration ban đầu:
+
+- `backend/categories/migrations/0001_initial.py`
+- `backend/products/migrations/0001_initial.py`
+
+## Cần làm thêm
+
+- Thêm validation để `price` không âm.
+- Thêm validation để `quantity` không âm.
+- Cân nhắc thêm `slug`, `sku`, `status` hoặc `image` nếu yêu cầu sản phẩm mở rộng.
+- Chuyển cấu hình database sang PostgreSQL trong môi trường Docker.
+>>>>>>> feature/frontend-crud

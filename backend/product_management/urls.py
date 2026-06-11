@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
+<<<<<<< HEAD
 from drf_spectacular.utils import OpenApiTypes, extend_schema
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -26,15 +27,22 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+=======
+from rest_framework.routers import DefaultRouter
+>>>>>>> feature/frontend-crud
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from categories.views import CategoryViewSet
 from products.views import ProductViewSet
+<<<<<<< HEAD
 from suppliers.views import SupplierViewSet
+=======
+>>>>>>> feature/frontend-crud
 
 router = DefaultRouter()
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
+<<<<<<< HEAD
 router.register(r"suppliers", SupplierViewSet, basename="supplier")
 
 
@@ -55,6 +63,11 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger_ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+=======
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+>>>>>>> feature/frontend-crud
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/", include(router.urls)),

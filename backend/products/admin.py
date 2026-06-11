@@ -1,4 +1,5 @@
 from django.contrib import admin
+<<<<<<< HEAD
 
 from .models import Product
 
@@ -16,3 +17,9 @@ class ProductAdmin(admin.ModelAdmin):
     )
     list_filter = ("status", "category", "supplier")
     search_fields = ("sku", "barcode", "name", "description")
+=======
+from .models import Product
+
+# Register your models here.
+admin.site.register(Product)
+>>>>>>> feature/frontend-crud

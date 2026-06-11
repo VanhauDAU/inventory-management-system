@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+<<<<<<< HEAD
 import os
 from pathlib import Path
 
@@ -18,12 +19,19 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env")
+=======
+from pathlib import Path
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+>>>>>>> feature/frontend-crud
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+<<<<<<< HEAD
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-dev-only-change-me")
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -43,6 +51,14 @@ CORS_ALLOWED_ORIGINS = [
     ).split(",")
     if origin.strip()
 ]
+=======
+SECRET_KEY = 'django-insecure-=uy4y^_%$0+1(q@=d0*3+7y_7i$yjxi@=p!83&j2i$g10trls('
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = []
+>>>>>>> feature/frontend-crud
 
 
 # Application definition
@@ -56,11 +72,17 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
+<<<<<<< HEAD
     'drf_spectacular',
     'categories',
     'products',
     'suppliers',
     'inventory',
+=======
+    'products',
+    'categories',
+    'accounts',
+>>>>>>> feature/frontend-crud
 ]
 
 REST_FRAMEWORK = {
@@ -74,6 +96,7 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+<<<<<<< HEAD
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "PAGE_SIZE": 10,
 }
@@ -99,6 +122,13 @@ SPECTACULAR_SETTINGS = {
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'product_management.middleware.CORSMiddleware',
+=======
+    "PAGE_SIZE": 10,
+}
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+>>>>>>> feature/frontend-crud
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -131,6 +161,7 @@ WSGI_APPLICATION = 'product_management.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+<<<<<<< HEAD
 db_engine = os.getenv("DB_ENGINE", "sqlite").lower()
 
 if db_engine in ("postgres", "postgresql"):
@@ -151,6 +182,14 @@ else:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
+=======
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+>>>>>>> feature/frontend-crud
 
 
 # Password validation

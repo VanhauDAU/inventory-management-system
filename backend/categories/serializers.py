@@ -4,6 +4,7 @@ from .models import Category
 
 
 class CategorySerializer(serializers.ModelSerializer):
+<<<<<<< HEAD
     parent_name = serializers.CharField(source="parent.name", read_only=True)
     products_count = serializers.IntegerField(source="products.count", read_only=True)
 
@@ -27,3 +28,8 @@ class CategorySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Category cannot be its own parent.")
 
         return parent
+=======
+    class Meta:
+        model = Category
+        fields = ["id", "name"]
+>>>>>>> feature/frontend-crud

@@ -1,10 +1,18 @@
 import { useState } from 'react'
+<<<<<<< HEAD
 import { useNavigate } from 'react-router-dom'
 import { login } from '../services/authService'
 import '../styles/LoginPage.css'
 
 function LoginPage() {
   const navigate = useNavigate()
+=======
+import '../styles/LoginPage.css'
+
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+
+function LoginPage({ onLogin }) {
+>>>>>>> feature/frontend-crud
   const [form, setForm] = useState({ username: '', password: '' })
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
@@ -21,7 +29,10 @@ function LoginPage() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
+<<<<<<< HEAD
     // Xóa lỗi khi user bắt đầu nhập lại
+=======
+>>>>>>> feature/frontend-crud
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
     if (apiError) setApiError('')
   }
@@ -36,6 +47,7 @@ function LoginPage() {
 
     setLoading(true)
     try {
+<<<<<<< HEAD
       const authData = await login(form.username, form.password)
       console.log('Login success:', {
         username: form.username,
@@ -49,6 +61,32 @@ function LoginPage() {
         err.response?.data?.non_field_errors?.[0] ||
         'Đăng nhập thất bại. Vui lòng thử lại.'
       setApiError(msg)
+=======
+      const response = await fetch(`${apiUrl}/token/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: form.username.trim(),
+          password: form.password,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+          data.non_field_errors?.[0] ||
+          'Đăng nhập thất bại. Vui lòng thử lại.'
+        )
+      }
+
+      localStorage.setItem('access_token', data.access)
+      localStorage.setItem('refresh_token', data.refresh)
+      onLogin?.()
+    } catch (err) {
+      setApiError(err.message || 'Đăng nhập thất bại. Vui lòng thử lại.')
+>>>>>>> feature/frontend-crud
     } finally {
       setLoading(false)
     }

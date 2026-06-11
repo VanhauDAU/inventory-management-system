@@ -46,6 +46,7 @@ Body:
 Authorization: Bearer access_token
 ```
 
+<<<<<<< HEAD
 ## Health Check
 
 Endpoint dùng để kiểm tra backend API đang chạy. Endpoint này không yêu cầu JWT token.
@@ -82,6 +83,8 @@ ReDoc:
 GET /api/redoc/
 ```
 
+=======
+>>>>>>> feature/frontend-crud
 ## Category API
 
 ### Danh sách category

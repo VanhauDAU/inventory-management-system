@@ -9,6 +9,7 @@
 - `05-huong-dan`: Hướng dẫn chạy dự án và test API.
 - `06-deployment`: Ghi chú Docker, PostgreSQL, CI/CD và triển khai.
 - `07-algorithms`: Search, filter, pagination và các xử lý nghiệp vụ.
+<<<<<<< HEAD
 - `08-frontend`: Thiết kế giao diện, layout, sidebar và các màn hình frontend.
 
 ## Tài liệu quan trọng
@@ -18,6 +19,13 @@
 - Kế hoạch phát triển backend: `docs/01-phan-tich/ke-hoach-phat-trien-backend.md`.
 - Phân công thành viên: `docs/01-phan-tich/phan-cong-thanh-vien.md`.
 - Thiết kế sidebar và bố cục quản trị: `docs/08-frontend/thiet-ke-giao-dien-sidebar.md`.
+=======
+
+## Tài liệu quan trọng
+
+- Kế hoạch và trạng thái dự án: `docs/01-phan-tich/ke-hoach-trang-thai-du-an.md`.
+- Phân công thành viên: `docs/01-phan-tich/phan-cong-thanh-vien.md`.
+>>>>>>> feature/frontend-crud
 - Changelog: `docs/CHANGELOG.md`.
 
 ## Trạng thái phần backend của Lê Văn Hậu

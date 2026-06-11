@@ -1,15 +1,22 @@
+<<<<<<< HEAD
 import uuid
 
 from rest_framework import serializers
 
 from categories.serializers import CategorySerializer
 from suppliers.serializers import SupplierSerializer
+=======
+from rest_framework import serializers
+
+from categories.serializers import CategorySerializer
+>>>>>>> feature/frontend-crud
 
 from .models import Product
 
 
 class ProductSerializer(serializers.ModelSerializer):
     category_detail = CategorySerializer(source="category", read_only=True)
+<<<<<<< HEAD
     supplier_detail = SupplierSerializer(source="supplier", read_only=True)
     supplier_name = serializers.CharField(source="supplier.name", read_only=True)
     price = serializers.DecimalField(
@@ -18,11 +25,14 @@ class ProductSerializer(serializers.ModelSerializer):
         required=False,
         write_only=True,
     )
+=======
+>>>>>>> feature/frontend-crud
 
     class Meta:
         model = Product
         fields = [
             "id",
+<<<<<<< HEAD
             "sku",
             "barcode",
             "name",
@@ -40,10 +50,19 @@ class ProductSerializer(serializers.ModelSerializer):
             "supplier",
             "supplier_detail",
             "supplier_name",
+=======
+            "name",
+            "description",
+            "price",
+            "quantity",
+            "category",
+            "category_detail",
+>>>>>>> feature/frontend-crud
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
+<<<<<<< HEAD
         extra_kwargs = {
             "sku": {"required": False},
             "selling_price": {"required": False},
@@ -68,3 +87,5 @@ class ProductSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation["price"] = representation["selling_price"]
         return representation
+=======
+>>>>>>> feature/frontend-crud

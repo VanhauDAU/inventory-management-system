@@ -4,6 +4,7 @@ __pycache__/
 db.sqlite3
 .env
 .DS_Store
+<<<<<<< HEAD
 .vscode/
 node_modules/
 dist/
@@ -11,3 +12,6 @@ dist/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+=======
+.vscode/
+>>>>>>> feature/frontend-crud

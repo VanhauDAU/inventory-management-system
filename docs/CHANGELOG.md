@@ -2,6 +2,7 @@
 
 Tài liệu này ghi lại các thay đổi chính của dự án.
 
+<<<<<<< HEAD
 ## 2026-06-11
 
 ### Added
@@ -32,10 +33,13 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 - Docker backend và PostgreSQL đều hoạt động.
 - Backend test với PostgreSQL: `8 tests OK`.
 
+=======
+>>>>>>> feature/frontend-crud
 ## 2026-06-08
 
 ### Added
 
+<<<<<<< HEAD
 - Thêm Swagger/OpenAPI bằng `drf-spectacular`.
 - Thêm endpoint tài liệu API: `/api/docs/`, `/api/schema/`, `/api/redoc/`.
 - Thêm CORS middleware để frontend `localhost:3000` gọi được backend `localhost:8000`.
@@ -54,6 +58,8 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 - CI chạy backend test với PostgreSQL service.
 - CI chạy frontend build bằng Vite.
 - Thêm `.gitattributes` để giữ line ending LF cho shell script và workflow YAML.
+=======
+>>>>>>> feature/frontend-crud
 - Tạo nhánh `dev` làm nhánh tích hợp chung.
 - Triển khai CRUD API cho Product.
 - Triển khai CRUD API cho Category.
@@ -77,11 +83,14 @@ Tài liệu này ghi lại các thay đổi chính của dự án.
 
 ### Changed
 
+<<<<<<< HEAD
 - Cập nhật backend Dockerfile để normalize CRLF trong `entrypoint.sh` và chạy entrypoint qua `sh`.
 - Xóa `frontend/.env.example` để tránh mỗi folder có một file env riêng.
 - Chuyển `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS` và database config sang biến môi trường.
 - Chuẩn hóa `DB_ENGINE` để hỗ trợ cả `postgres` và `postgresql`.
 - Cập nhật `.env.example` mặc định dùng PostgreSQL qua Docker service `db`.
+=======
+>>>>>>> feature/frontend-crud
 - Đổi tên các file docs từ `README.md` sang tên cụ thể hơn:
   - `phan-tich-yeu-cau.md`
   - `tong-quan-he-thong.md`
@@ -102,6 +111,7 @@ cd backend
 ```
 
 - Kết quả: `5 tests OK`.
+<<<<<<< HEAD
 - Đã rà soát cấu hình `.env`, Docker Compose, backend Dockerfile và entrypoint.
 - Đã chạy `docker compose config` thành công.
 - Đã build và khởi động `docker compose up --build -d` thành công.
@@ -111,12 +121,20 @@ cd backend
 - Đã kiểm tra `GET /api/products/` trên Docker backend trả `401 Unauthorized` đúng vì API yêu cầu JWT.
 - Đã chạy `npm ci` trong frontend thành công.
 - Đã chạy `npm run build` trong frontend thành công.
+=======
+>>>>>>> feature/frontend-crud
 
 ### Pending
 
 - Validate `price >= 0` và `quantity >= 0`.
 - Kiểm thử và mở rộng phần auth/search/filter/pagination cho nhánh `feature/auth-api`.
+<<<<<<< HEAD
 - Bổ sung frontend service vào Docker Compose nếu nhóm muốn chạy toàn bộ hệ thống bằng một lệnh.
 - Hoàn thiện frontend React.
 - Mở rộng GitHub Actions thêm lint, coverage hoặc deploy nếu nhóm cần.
+=======
+- Hoàn thiện PostgreSQL trong Docker.
+- Hoàn thiện frontend React.
+- Thêm GitHub Actions CI/CD.
+>>>>>>> feature/frontend-crud
 - Export Postman collection nếu cần nộp.
