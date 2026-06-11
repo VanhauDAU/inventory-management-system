@@ -30,10 +30,12 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from categories.views import CategoryViewSet
 from products.views import ProductViewSet
+from suppliers.views import SupplierViewSet
 
 router = DefaultRouter()
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
+router.register(r"suppliers", SupplierViewSet, basename="supplier")
 
 
 @extend_schema(
