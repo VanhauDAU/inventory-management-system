@@ -45,8 +45,9 @@ Product Management System là hệ thống quản lý sản phẩm gồm fronten
 
 - Dockerfile cho backend.
 - Dockerfile cho frontend nếu cần.
-- Docker Compose gồm backend, frontend và PostgreSQL.
-- File `.env.example`.
+- Docker Compose gồm backend và PostgreSQL.
+- Docker Compose frontend nếu nhóm muốn chạy cả React bằng Docker.
+- File `.env.example` dùng chung ở thư mục gốc.
 - Cấu hình Django đọc biến môi trường.
 - GitHub Actions chạy test tự động.
 - Hướng dẫn chạy dự án bằng Docker.
@@ -122,6 +123,23 @@ Product Management System là hệ thống quản lý sản phẩm gồm fronten
 - Đã có hướng dẫn test API bằng Postman.
 - Đã có tài liệu phân công thành viên.
 
+### Environment config
+
+- Đã tạo `.env.example` ở thư mục gốc.
+- Backend đọc `.env` từ thư mục gốc bằng `python-dotenv`.
+- Frontend Vite đọc env từ thư mục gốc bằng `envDir: "../"`.
+- Không cần đặt file `.env` riêng trong từng folder backend/frontend.
+
+### Docker và PostgreSQL
+
+- Đã có `backend/Dockerfile`.
+- Đã có `backend/entrypoint.sh`.
+- Đã có `docker-compose.yml` cho backend và PostgreSQL.
+- Backend container chờ PostgreSQL sẵn sàng trước khi chạy migration.
+- Backend container tự chạy migration khi khởi động.
+- Đã kiểm tra Docker Compose build và start thành công.
+- Đã kiểm tra backend kết nối PostgreSQL trong Docker thành công.
+
 ## Chưa thực hiện
 
 ### Backend
@@ -145,9 +163,9 @@ Product Management System là hệ thống quản lý sản phẩm gồm fronten
 
 ### Database và Docker
 
-- Backend hiện vẫn dùng SQLite trong môi trường dev.
-- Chưa cấu hình PostgreSQL trong `settings.py` bằng biến môi trường.
-- Chưa có Docker Compose hoàn chỉnh cho toàn hệ thống.
+- Backend local có thể dùng SQLite khi `DB_ENGINE=sqlite`.
+- Docker Compose đang dùng PostgreSQL khi `DB_ENGINE=postgres`.
+- Chưa có Docker Compose cho frontend.
 - Chưa có script seed dữ liệu mẫu.
 
 ### CI/CD
@@ -191,11 +209,11 @@ Người phụ trách chính: Lê Đình Nguyên, Nguyễn Nguyên Tài.
 
 Người phụ trách chính: Trần Văn Sỹ.
 
-- Tạo Dockerfile backend.
+- Rà soát Dockerfile backend.
 - Tạo Dockerfile frontend nếu cần.
-- Tạo Docker Compose với PostgreSQL.
-- Chuyển Django database config sang biến môi trường.
-- Chạy migration trên PostgreSQL.
+- Bổ sung service frontend vào Docker Compose nếu cần.
+- Duy trì Django database config bằng biến môi trường.
+- Kiểm tra migration trên PostgreSQL khi thay đổi model.
 - Tạo GitHub Actions chạy backend test.
 
 ### Giai đoạn 4 - Tích hợp và hoàn thiện tài liệu
