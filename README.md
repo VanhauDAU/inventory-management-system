@@ -10,7 +10,7 @@ Dự án hiện tập trung vào backend API quản lý sản phẩm/danh mục,
 - Backend: Django 4.2, Django REST Framework.
 - Authentication: JWT với `djangorestframework-simplejwt`.
 - Database: PostgreSQL trong Docker, SQLite tùy chọn cho local dev.
-- DevOps: Docker, Docker Compose.
+- DevOps: Docker, Docker Compose, GitHub Actions.
 - Testing: Django test framework, DRF API test client.
 
 ## Cấu trúc thư mục
@@ -19,8 +19,10 @@ Dự án hiện tập trung vào backend API quản lý sản phẩm/danh mục,
 product-management-system/
 ├── backend/
 │   ├── categories/
+│   ├── inventory/
 │   ├── products/
 │   ├── product_management/
+│   ├── suppliers/
 │   ├── Dockerfile
 │   ├── entrypoint.sh
 │   ├── manage.py
@@ -49,10 +51,14 @@ product-management-system/
 
 - CRUD API cho Product.
 - CRUD API cho Category.
+- Database cho Supplier, Warehouse và giao dịch nhập/xuất/điều chỉnh kho.
+- Category hỗ trợ quan hệ danh mục cha-con.
+- Product hỗ trợ SKU, barcode, nhà cung cấp, giá nhập/giá bán, tồn tối thiểu, đơn vị và trạng thái.
 - JWT authentication cho API.
 - Search, filter, ordering và pagination cơ bản cho Product API.
 - PostgreSQL chạy bằng Docker Compose.
 - Backend container tự chạy migration khi khởi động.
+- GitHub Actions CI chạy backend test với PostgreSQL và build frontend.
 - Test backend cho Product/Category API.
 - Tài liệu database, API, hướng dẫn chạy, deployment và kế hoạch dự án.
 
@@ -60,9 +66,8 @@ Chưa hoàn thiện:
 
 - Frontend React đầy đủ.
 - Frontend service trong Docker Compose.
-- GitHub Actions CI/CD.
+- API CRUD cho Supplier, Warehouse và Stock Transaction.
 - Filter nâng cao theo khoảng giá và tồn kho.
-- Validation nghiệp vụ cho `price` và `quantity`.
 - Postman collection export.
 
 ## Cấu hình môi trường
@@ -81,6 +86,7 @@ Ví dụ cấu hình khi chạy Docker Compose với PostgreSQL:
 DJANGO_SECRET_KEY=change-me
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 
 DB_ENGINE=postgres
 POSTGRES_DB=product_management
@@ -106,6 +112,17 @@ Chạy từ thư mục gốc dự án:
 ```bash
 docker compose up --build -d
 ```
+
+Trên Windows cũng chạy lệnh này từ thư mục gốc, nơi có file `docker-compose.yml`, không chạy trong thư mục `backend`.
+
+Nếu backend báo lỗi `exec /app/entrypoint.sh: no such file or directory`, rebuild không dùng cache:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d
+```
+
+Lỗi này thường do file `.sh` bị chuyển line ending sang CRLF trên Windows. Dự án đã cấu hình `.gitattributes` và Dockerfile để tự xử lý LF/CRLF.
 
 Kiểm tra container:
 
@@ -184,6 +201,28 @@ Authorization: Bearer access_token
 
 ## API chính
 
+### Health Check
+
+```http
+GET /api/health/
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Swagger/OpenAPI
+
+```http
+GET /api/docs/
+GET /api/schema/
+GET /api/redoc/
+```
+
 ### Authentication
 
 ```http
@@ -238,7 +277,35 @@ DB_ENGINE=sqlite ./venv/bin/python manage.py test
 Kết quả kiểm tra gần nhất:
 
 ```text
-5 tests OK
+8 tests OK
+```
+
+## CI bằng GitHub Actions
+
+Workflow CI nằm tại:
+
+```text
+.github/workflows/ci.yml
+```
+
+CI tự chạy khi:
+
+- Push lên `main`, `dev` hoặc các nhánh `feature/**`.
+- Tạo hoặc cập nhật Pull Request vào `dev` hoặc `main`.
+
+Các job hiện có:
+
+- `backend-tests`: cài Python dependencies, chạy Django check, chạy migration và test backend với PostgreSQL service.
+- `frontend-build`: cài frontend dependencies bằng `npm ci` và chạy `npm run build`.
+
+Kiểm tra local tương đương trước khi push:
+
+```bash
+docker compose up --build -d
+docker compose exec backend python manage.py test
+cd frontend
+npm ci
+npm run build
 ```
 
 ## Quy trình Git đề xuất

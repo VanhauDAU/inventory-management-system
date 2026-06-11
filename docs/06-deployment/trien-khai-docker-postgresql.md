@@ -11,7 +11,7 @@ Khi chạy bằng Docker Compose:
 - Backend đọc database config từ file `.env`.
 - Backend tự chạy `python manage.py migrate` khi container khởi động.
 
-Frontend và GitHub Actions chưa được cấu hình trong phạm vi hiện tại.
+GitHub Actions đã được cấu hình để chạy backend test với PostgreSQL service và build frontend.
 
 Các file chính:
 
@@ -20,6 +20,7 @@ Các file chính:
 - `backend/Dockerfile`
 - `backend/entrypoint.sh`
 - `backend/product_management/settings.py`
+- `.github/workflows/ci.yml`
 
 ## Tạo file môi trường
 
@@ -62,6 +63,21 @@ Chạy từ thư mục gốc dự án:
 docker compose up --build -d
 ```
 
+Trên Windows, cần chạy từ thư mục gốc dự án, nơi có file `docker-compose.yml`. Không chạy trong thư mục `backend`.
+
+Nếu gặp lỗi:
+
+```text
+exec /app/entrypoint.sh: no such file or directory
+```
+
+Nguyên nhân thường là file `entrypoint.sh` bị chuyển line ending từ LF sang CRLF. Dự án đã có `.gitattributes` và Dockerfile tự normalize line ending. Nếu vẫn lỗi do Docker cache cũ, chạy:
+
+```bash
+docker compose build --no-cache backend
+docker compose up -d
+```
+
 Kiểm tra container:
 
 ```bash
@@ -100,6 +116,23 @@ Nếu cần chạy migration thủ công:
 docker compose exec backend python manage.py migrate
 ```
 
+Kiểm tra các migration database mở rộng:
+
+```bash
+docker compose exec backend python manage.py showmigrations suppliers categories products inventory
+```
+
+Các bảng nghiệp vụ sau migration:
+
+```text
+categories
+suppliers
+products
+warehouses
+stock_transactions
+stock_transaction_items
+```
+
 ## Tạo user để test JWT
 
 ```bash
@@ -127,6 +160,23 @@ Body:
 docker compose exec backend python manage.py test
 ```
 
+## GitHub Actions CI
+
+Workflow CI nằm tại:
+
+```text
+.github/workflows/ci.yml
+```
+
+CI tự chạy khi push lên `main`, `dev`, `feature/**` hoặc khi tạo Pull Request vào `dev`/`main`.
+
+Các job hiện có:
+
+- `backend-tests`: chạy trên Ubuntu, dùng PostgreSQL 16 service, cài dependency Python, chạy `python manage.py check`, `python manage.py migrate --noinput` và `python manage.py test`.
+- `frontend-build`: cài dependency frontend bằng `npm ci` và chạy `npm run build`.
+
+Trong CI, backend kết nối PostgreSQL qua `POSTGRES_HOST=127.0.0.1` vì database chạy dưới dạng GitHub Actions service. Khi chạy bằng Docker Compose local, backend vẫn dùng `POSTGRES_HOST=db`.
+
 ## Dừng container
 
 ```bash
@@ -142,4 +192,4 @@ docker compose down -v
 ## Việc còn lại
 
 - Thêm service frontend vào `docker-compose.yml` nếu nhóm muốn chạy React bằng Docker.
-- Thêm GitHub Actions để chạy test tự động khi push hoặc mở Pull Request.
+- Mở rộng GitHub Actions thêm lint, coverage hoặc deploy nếu nhóm cần.

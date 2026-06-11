@@ -46,6 +46,42 @@ Body:
 Authorization: Bearer access_token
 ```
 
+## Health Check
+
+Endpoint dùng để kiểm tra backend API đang chạy. Endpoint này không yêu cầu JWT token.
+
+```http
+GET /api/health/
+```
+
+Response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+## Swagger/OpenAPI
+
+Tài liệu API tự động từ Django REST Framework:
+
+```http
+GET /api/docs/
+```
+
+OpenAPI schema:
+
+```http
+GET /api/schema/
+```
+
+ReDoc:
+
+```http
+GET /api/redoc/
+```
+
 ## Category API
 
 ### Danh sách category

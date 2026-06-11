@@ -38,6 +38,8 @@ class ProductAPITests(APITestCase):
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         product_id = create_response.data["id"]
         self.assertEqual(create_response.data["category_detail"]["name"], "Electronics")
+        self.assertEqual(create_response.data["price"], "49.99")
+        self.assertTrue(create_response.data["sku"].startswith("PRD-"))
 
         list_response = self.client.get("/api/products/?search=Keyboard")
         self.assertEqual(list_response.status_code, status.HTTP_200_OK)
@@ -59,16 +61,18 @@ class ProductAPITests(APITestCase):
         self.client.force_authenticate(user=self.user)
         other_category = Category.objects.create(name="Stationery")
         Product.objects.create(
+            sku="MOUSE-001",
             name="Mouse",
             description="Wireless mouse",
-            price="19.99",
+            selling_price="19.99",
             quantity=5,
             category=self.category,
         )
         Product.objects.create(
+            sku="NOTEBOOK-001",
             name="Notebook",
             description="A5 notebook",
-            price="3.50",
+            selling_price="3.50",
             quantity=20,
             category=other_category,
         )
@@ -78,3 +82,11 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Mouse")
+
+
+class HealthCheckAPITests(APITestCase):
+    def test_health_check_does_not_require_authentication(self):
+        response = self.client.get("/api/health/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"status": "ok"})

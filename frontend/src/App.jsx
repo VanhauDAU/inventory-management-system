@@ -3,7 +3,6 @@ import { isAuthenticated } from './services/authService'
 import LoginPage from './pages/LoginPage'
 import ProductCRUDPage from './pages/ProductCRUDPage'
 
-// Route bảo vệ - chưa đăng nhập thì về login
 function PrivateRoute({ children }) {
   return isAuthenticated() ? children : <Navigate to="/login" replace />
 }
@@ -21,7 +20,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* Mặc định về login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
