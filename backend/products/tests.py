@@ -1,8 +1,11 @@
+from decimal import Decimal
+
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from categories.models import Category
+from inventory.models import StockTransaction, StockTransactionItem, Warehouse
 
 from .models import Product
 
@@ -82,6 +85,36 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Mouse")
+
+    def test_authenticated_user_can_view_product_stock_history(self):
+        self.client.force_authenticate(user=self.user)
+        product = Product.objects.create(
+            sku="KEYBOARD-001",
+            name="Keyboard",
+            selling_price="49.99",
+            quantity=10,
+            category=self.category,
+        )
+        warehouse = Warehouse.objects.create(name="Main Warehouse")
+        stock_transaction = StockTransaction.objects.create(
+            warehouse=warehouse,
+            transaction_type=StockTransaction.TransactionType.IMPORT,
+            transaction_code="IMPORT-001",
+            created_by=self.user,
+        )
+        StockTransactionItem.objects.create(
+            stock_transaction=stock_transaction,
+            product=product,
+            quantity=5,
+            unit_price=Decimal("40.00"),
+        )
+
+        response = self.client.get(f"/api/products/{product.id}/stock-history/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["product"], product.id)
+        self.assertEqual(response.data["results"][0]["total_amount"], "200.00")
 
 
 class HealthCheckAPITests(APITestCase):

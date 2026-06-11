@@ -29,6 +29,11 @@ from drf_spectacular.views import (
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from categories.views import CategoryViewSet
+from inventory.views import (
+    StockTransactionItemViewSet,
+    StockTransactionViewSet,
+    WarehouseViewSet,
+)
 from products.views import ProductViewSet
 from suppliers.views import SupplierViewSet
 
@@ -36,6 +41,13 @@ router = DefaultRouter()
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"suppliers", SupplierViewSet, basename="supplier")
+router.register(r"warehouses", WarehouseViewSet, basename="warehouse")
+router.register(r"stock-transactions", StockTransactionViewSet, basename="stock-transaction")
+router.register(
+    r"stock-transaction-items",
+    StockTransactionItemViewSet,
+    basename="stock-transaction-item",
+)
 
 
 @extend_schema(
@@ -57,5 +69,6 @@ urlpatterns = [
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/reports/", include("reports.urls")),
     path("api/", include(router.urls)),
 ]
