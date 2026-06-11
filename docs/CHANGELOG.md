@@ -2,6 +2,36 @@
 
 Tài liệu này ghi lại các thay đổi chính của dự án.
 
+## 2026-06-11
+
+### Added
+
+- Mở rộng bảng `categories` với mô tả, danh mục cha-con, trạng thái và timestamps.
+- Thêm bảng `suppliers`.
+- Mở rộng bảng `products` với SKU, barcode, ảnh, supplier, giá nhập, giá bán, tồn tối thiểu, đơn vị và trạng thái.
+- Thêm bảng `warehouses`.
+- Thêm bảng `stock_transactions`.
+- Thêm bảng `stock_transaction_items`.
+- Thêm quan hệ và constraint giữa Category, Supplier, Product, Warehouse, User và Stock Transaction.
+- Thêm Django admin cho Supplier, Warehouse và Stock Transaction.
+- Thêm test model cho quan hệ kho và tính `total_amount`.
+
+### Changed
+
+- Rename bảng Django cũ `categories_category` thành `categories`.
+- Rename bảng Django cũ `products_product` thành `products`.
+- Rename cột `price` thành `selling_price`, giữ alias API `price` để tương thích frontend.
+- Product cũ được tự sinh SKU theo định dạng `PRD-000001`.
+
+### Verified
+
+- Django system check không có lỗi.
+- `makemigrations --check --dry-run` báo `No changes detected`.
+- Migration PostgreSQL cho toàn bộ schema mới thành công.
+- Kiểm tra migration dữ liệu cũ giữ nguyên giá, quantity và category thành công.
+- Docker backend và PostgreSQL đều hoạt động.
+- Backend test với PostgreSQL: `8 tests OK`.
+
 ## 2026-06-08
 
 ### Added

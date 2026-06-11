@@ -116,6 +116,23 @@ Nếu cần chạy migration thủ công:
 docker compose exec backend python manage.py migrate
 ```
 
+Kiểm tra các migration database mở rộng:
+
+```bash
+docker compose exec backend python manage.py showmigrations suppliers categories products inventory
+```
+
+Các bảng nghiệp vụ sau migration:
+
+```text
+categories
+suppliers
+products
+warehouses
+stock_transactions
+stock_transaction_items
+```
+
 ## Tạo user để test JWT
 
 ```bash
