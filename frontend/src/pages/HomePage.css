@@ -1,0 +1,221 @@
+/* ===== HOME PAGE ===== */
+.home-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Banner */
+.home-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 2rem 2.5rem;
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 55%, #0891b2 100%);
+  border-radius: 20px;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+.home-banner::before {
+  content: '';
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  right: 120px;
+  top: -80px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.home-banner-copy {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.home-eyebrow {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #93c5fd;
+  margin-bottom: 0.5rem;
+}
+
+.home-banner h2 {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.home-banner p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #bfdbfe;
+  line-height: 1.65;
+  max-width: 480px;
+}
+
+.home-banner-visual {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Stats grid */
+.home-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.home-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.home-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  flex-shrink: 0;
+}
+
+.home-stat-card.color-blue .home-stat-icon { background: #eff6ff; color: #2563eb; }
+.home-stat-card.color-cyan .home-stat-icon { background: #ecfeff; color: #0891b2; }
+.home-stat-card.color-amber .home-stat-icon { background: #fffbeb; color: #d97706; }
+.home-stat-card.color-green .home-stat-icon { background: #f0fdf4; color: #16a34a; }
+
+.home-stat-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-stat-label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 3px;
+}
+
+.home-stat-value {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Section */
+.home-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 1.5rem;
+}
+
+.home-section-title {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Quick links */
+.home-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.home-quick-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.home-quick-card:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  transform: translateY(-2px);
+}
+
+.home-quick-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.home-quick-card strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.home-quick-card p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.home-quick-arrow {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: #94a3b8;
+}
+
+.home-quick-card:hover .home-quick-arrow {
+  color: #2563eb;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .home-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .home-banner {
+    padding: 1.5rem;
+  }
+
+  .home-banner-visual {
+    display: none;
+  }
+
+  .home-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-quick-grid {
+    grid-template-columns: 1fr;
+  }
+}

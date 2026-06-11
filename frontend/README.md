@@ -1,19 +1,32 @@
-# Frontend React App
+# Frontend - Lê Đình Nguyên
 
-This folder contains a Vite + React frontend for the project.
+Phần frontend này chỉ thực hiện đúng nhiệm vụ được phân công cho Lê Đình Nguyên:
 
-## Setup
+- Setup React/Vite.
+- Thiết kế layout giao diện chính.
+- Thiết kế trang chính dạng website sản phẩm.
+- Hiển thị danh mục sản phẩm.
+- Hiển thị danh sách sản phẩm.
+- Hiển thị chi tiết sản phẩm.
+- Giữ mục Thống kê như một trang riêng trong giao diện chính.
+- Gọi `GET /api/products/` và `GET /api/categories/` khi có access token.
+- Hiển thị loading, empty state, error state và pagination.
 
-1. Open `frontend`
-2. Run `npm install`
-3. Run `npm run dev`
+Không thực hiện backend, database, đăng nhập, thêm, sửa, xóa sản phẩm, Docker hoặc CI.
 
-## Environment variables
+## Chạy frontend
 
-Create a `.env` file in `frontend/` and add backend connection variables, for example:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend đọc API URL từ `.env`:
 
 ```env
 VITE_API_URL=http://localhost:8000/api
 ```
 
-Then use it in React with `import.meta.env.VITE_API_URL`.
+Nếu chưa có backend hoặc token đăng nhập, giao diện sẽ dùng dữ liệu mẫu để demo.
+Khi thành viên phụ trách Login lưu access token vào `localStorage` với key `access_token` hoặc `accessToken`, frontend sẽ tự gọi API thật.
