@@ -19,8 +19,10 @@ Dự án hiện tập trung vào backend API quản lý sản phẩm/danh mục,
 product-management-system/
 ├── backend/
 │   ├── categories/
+│   ├── inventory/
 │   ├── products/
 │   ├── product_management/
+│   ├── suppliers/
 │   ├── Dockerfile
 │   ├── entrypoint.sh
 │   ├── manage.py
@@ -49,6 +51,9 @@ product-management-system/
 
 - CRUD API cho Product.
 - CRUD API cho Category.
+- Database cho Supplier, Warehouse và giao dịch nhập/xuất/điều chỉnh kho.
+- Category hỗ trợ quan hệ danh mục cha-con.
+- Product hỗ trợ SKU, barcode, nhà cung cấp, giá nhập/giá bán, tồn tối thiểu, đơn vị và trạng thái.
 - JWT authentication cho API.
 - Search, filter, ordering và pagination cơ bản cho Product API.
 - PostgreSQL chạy bằng Docker Compose.
@@ -61,8 +66,8 @@ Chưa hoàn thiện:
 
 - Frontend React đầy đủ.
 - Frontend service trong Docker Compose.
+- API CRUD cho Supplier, Warehouse và Stock Transaction.
 - Filter nâng cao theo khoảng giá và tồn kho.
-- Validation nghiệp vụ cho `price` và `quantity`.
 - Postman collection export.
 
 ## Cấu hình môi trường
@@ -272,7 +277,7 @@ DB_ENGINE=sqlite ./venv/bin/python manage.py test
 Kết quả kiểm tra gần nhất:
 
 ```text
-5 tests OK
+8 tests OK
 ```
 
 ## CI bằng GitHub Actions
