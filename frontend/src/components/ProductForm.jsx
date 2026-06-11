@@ -5,10 +5,14 @@ import '../styles/ProductForm.css'
 // initialData: truyền vào khi sửa, để trống khi thêm mới
 function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }) {
   const [form, setForm] = useState({
+    sku: '',
     name: '',
     description: '',
+    cost_price: '',
     price: '',
     quantity: '',
+    minimum_stock: '',
+    status: 'active',
     category: '',
   })
   const [errors, setErrors] = useState({})
@@ -19,10 +23,14 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
   useEffect(() => {
     if (initialData) {
       setForm({
+        sku: initialData.sku || '',
         name: initialData.name || '',
         description: initialData.description || '',
+        cost_price: initialData.cost_price || '',
         price: initialData.price || '',
         quantity: initialData.quantity || '',
+        minimum_stock: initialData.minimum_stock || '',
+        status: initialData.status || 'active',
         category: initialData.category || '',
       })
     }
@@ -45,15 +53,23 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
     else if (form.name.trim().length < 2) newErrors.name = 'Tên sản phẩm ít nhất 2 ký tự'
 
     if (form.price === '' || form.price === null) {
-      newErrors.price = 'Vui lòng nhập giá'
+      newErrors.price = 'Vui lòng nhập giá bán'
     } else if (isNaN(Number(form.price)) || Number(form.price) < 0) {
-      newErrors.price = 'Giá phải là số không âm'
+      newErrors.price = 'Giá bán phải là số không âm'
+    }
+
+    if (form.cost_price !== '' && (isNaN(Number(form.cost_price)) || Number(form.cost_price) < 0)) {
+      newErrors.cost_price = 'Giá nhập phải là số không âm'
     }
 
     if (form.quantity === '' || form.quantity === null) {
       newErrors.quantity = 'Vui lòng nhập số lượng'
     } else if (!Number.isInteger(Number(form.quantity)) || Number(form.quantity) < 0) {
       newErrors.quantity = 'Số lượng phải là số nguyên không âm'
+    }
+
+    if (form.minimum_stock !== '' && (!Number.isInteger(Number(form.minimum_stock)) || Number(form.minimum_stock) < 0)) {
+      newErrors.minimum_stock = 'Tồn tối thiểu phải là số nguyên không âm'
     }
 
     if (!form.category) newErrors.category = 'Vui lòng chọn danh mục'
@@ -75,10 +91,14 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       return
     }
     onSubmit({
+      ...(form.sku.trim() ? { sku: form.sku.trim() } : {}),
       name: form.name.trim(),
       description: form.description.trim(),
+      cost_price: form.cost_price === '' ? 0 : Number(form.cost_price),
       price: Number(form.price),
       quantity: Number(form.quantity),
+      minimum_stock: form.minimum_stock === '' ? 0 : Number(form.minimum_stock),
+      status: form.status,
       category: Number(form.category),
     })
   }
@@ -87,6 +107,18 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="product-form">
+      <div className="form-group">
+        <label className="form-label">SKU</label>
+        <input
+          name="sku"
+          type="text"
+          className="form-input"
+          placeholder="Để trống để hệ thống tự sinh mã"
+          value={form.sku}
+          onChange={handleChange}
+        />
+      </div>
+
       {/* Tên sản phẩm */}
       <div className="form-group">
         <label className="form-label">
@@ -119,8 +151,23 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       {/* Giá và Số lượng cùng hàng */}
       <div className="form-row">
         <div className="form-group">
+          <label className="form-label">Giá nhập (VNĐ)</label>
+          <input
+            name="cost_price"
+            type="number"
+            min="0"
+            step="1000"
+            className={`form-input ${errors.cost_price ? 'input-error' : ''}`}
+            placeholder="0"
+            value={form.cost_price}
+            onChange={handleChange}
+          />
+          {errors.cost_price && <p className="error-msg">{errors.cost_price}</p>}
+        </div>
+
+        <div className="form-group">
           <label className="form-label">
-            Giá (VNĐ) <span className="required">*</span>
+            Giá bán (VNĐ) <span className="required">*</span>
           </label>
           <input
             name="price"
@@ -134,7 +181,9 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
           />
           {errors.price && <p className="error-msg">{errors.price}</p>}
         </div>
+      </div>
 
+      <div className="form-row">
         <div className="form-group">
           <label className="form-label">
             Số lượng <span className="required">*</span>
@@ -150,6 +199,21 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
             onChange={handleChange}
           />
           {errors.quantity && <p className="error-msg">{errors.quantity}</p>}
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Tồn tối thiểu</label>
+          <input
+            name="minimum_stock"
+            type="number"
+            min="0"
+            step="1"
+            className={`form-input ${errors.minimum_stock ? 'input-error' : ''}`}
+            placeholder="0"
+            value={form.minimum_stock}
+            onChange={handleChange}
+          />
+          {errors.minimum_stock && <p className="error-msg">{errors.minimum_stock}</p>}
         </div>
       </div>
 
@@ -173,6 +237,20 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
           ))}
         </select>
         {errors.category && <p className="error-msg">{errors.category}</p>}
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Trạng thái kinh doanh</label>
+        <select
+          name="status"
+          className="form-input form-select"
+          value={form.status}
+          onChange={handleChange}
+        >
+          <option value="active">Đang kinh doanh</option>
+          <option value="inactive">Tạm ngưng</option>
+          <option value="discontinued">Ngừng kinh doanh</option>
+        </select>
       </div>
 
       {/* Nút hành động */}

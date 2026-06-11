@@ -27,7 +27,6 @@ const menuGroups = [
     ),
     children: [
       { key: 'product-list', label: 'Danh sách sản phẩm' },
-      { key: 'product-add', label: 'Thêm sản phẩm' },
       { key: 'product-categories', label: 'Danh mục sản phẩm' },
       { key: 'product-suppliers', label: 'Nhà phân phối' },
     ],
@@ -119,7 +118,7 @@ export default function Sidebar({ activePage, onNavigate }) {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-  function handleNavigate(pageKey) {
+function handleNavigate(pageKey) {
     onNavigate(pageKey)
   }
 

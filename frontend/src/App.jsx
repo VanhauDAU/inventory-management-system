@@ -42,7 +42,7 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
       return <ProductListPage onStatsChange={onStatsChange} />
 
     case 'product-add':
-      return <PlaceholderPage title="Thêm sản phẩm" description="Chức năng tạo mới sản phẩm — form nhập tên, giá, số lượng, danh mục." icon="➕" />
+      return <ProductListPage onStatsChange={onStatsChange} />
 
     case 'product-categories':
       return <PlaceholderPage title="Danh mục sản phẩm" description="Quản lý danh mục: xem, thêm, sửa, xóa danh mục." icon="🗂️" />

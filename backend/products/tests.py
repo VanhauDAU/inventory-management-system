@@ -86,6 +86,41 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["name"], "Mouse")
 
+    def test_authenticated_user_can_filter_products_by_price_quantity_status_and_low_stock(self):
+        self.client.force_authenticate(user=self.user)
+        Product.objects.create(
+            sku="ACTIVE-001",
+            name="Active Product",
+            selling_price="100.00",
+            quantity=10,
+            minimum_stock=3,
+            status=Product.Status.ACTIVE,
+            category=self.category,
+        )
+        Product.objects.create(
+            sku="LOW-001",
+            name="Low Stock Product",
+            selling_price="20.00",
+            quantity=2,
+            minimum_stock=5,
+            status=Product.Status.INACTIVE,
+            category=self.category,
+        )
+
+        response = self.client.get(
+            "/api/products/?min_price=50&max_price=150&min_quantity=5&status=active"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["name"], "Active Product")
+
+        low_stock_response = self.client.get("/api/products/?low_stock=true")
+
+        self.assertEqual(low_stock_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(low_stock_response.data["count"], 1)
+        self.assertEqual(low_stock_response.data["results"][0]["name"], "Low Stock Product")
+
     def test_authenticated_user_can_view_product_stock_history(self):
         self.client.force_authenticate(user=self.user)
         product = Product.objects.create(
@@ -115,6 +150,34 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["product"], product.id)
         self.assertEqual(response.data["results"][0]["total_amount"], "200.00")
+
+    def test_delete_product_used_in_stock_transaction_returns_conflict(self):
+        self.client.force_authenticate(user=self.user)
+        product = Product.objects.create(
+            sku="LOCKED-001",
+            name="Locked product",
+            selling_price="49.99",
+            quantity=10,
+            category=self.category,
+        )
+        warehouse = Warehouse.objects.create(name="Main Warehouse")
+        stock_transaction = StockTransaction.objects.create(
+            warehouse=warehouse,
+            transaction_type=StockTransaction.TransactionType.IMPORT,
+            transaction_code="IMPORT-LOCKED",
+            created_by=self.user,
+        )
+        StockTransactionItem.objects.create(
+            stock_transaction=stock_transaction,
+            product=product,
+            quantity=1,
+            unit_price=Decimal("40.00"),
+        )
+
+        response = self.client.delete(f"/api/products/{product.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertTrue(Product.objects.filter(id=product.id).exists())
 
 
 class HealthCheckAPITests(APITestCase):

@@ -1,24 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import ProductForm from '../../components/ProductForm'
 import './ProductListPage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
-
-// ── Demo data ──────────────────────────────────────────────────────────────────
-const demoCategories = [
-  { id: 1, name: 'Thiết bị công nghệ' },
-  { id: 2, name: 'Phụ kiện máy tính' },
-  { id: 3, name: 'Văn phòng phẩm' },
-  { id: 4, name: 'Thiết bị lưu trữ' },
-]
-
-const demoProducts = [
-  { id: 1, name: 'Laptop Dell Latitude 5420', description: 'Laptop văn phòng cấu hình ổn định, phù hợp cho nhân viên kinh doanh và quản trị nội bộ.', price: '15500000', quantity: 8, category: 1, category_detail: { id: 1, name: 'Thiết bị công nghệ' }, created_at: '2026-06-01T08:00:00Z', image: '/product-images/laptop.svg' },
-  { id: 2, name: 'Bàn phím cơ Keychron K2', description: 'Bàn phím cơ layout gọn, hỗ trợ kết nối Bluetooth và Type-C cho lập trình viên.', price: '2190000', quantity: 15, category: 2, category_detail: { id: 2, name: 'Phụ kiện máy tính' }, created_at: '2026-06-02T08:00:00Z', image: '/product-images/keyboard.svg' },
-  { id: 3, name: 'Chuột Logitech MX Master 3S', description: 'Chuột không dây cao cấp, thao tác mượt, phù hợp làm việc văn phòng và thiết kế.', price: '2450000', quantity: 5, category: 2, category_detail: { id: 2, name: 'Phụ kiện máy tính' }, created_at: '2026-06-03T08:00:00Z', image: '/product-images/mouse.svg' },
-  { id: 4, name: 'Ổ cứng SSD Samsung 1TB', description: 'Ổ cứng SSD tốc độ cao phục vụ lưu trữ dữ liệu dự án và sao lưu tài liệu.', price: '1890000', quantity: 3, category: 4, category_detail: { id: 4, name: 'Thiết bị lưu trữ' }, created_at: '2026-06-04T08:00:00Z', image: '/product-images/ssd.svg' },
-  { id: 5, name: 'Sổ tay A5 Project Note', description: 'Sổ ghi chú dùng cho họp nhóm, ghi task, phân tích yêu cầu và lập kế hoạch sprint.', price: '45000', quantity: 30, category: 3, category_detail: { id: 3, name: 'Văn phòng phẩm' }, created_at: '2026-06-05T08:00:00Z', image: '/product-images/notebook.svg' },
-  { id: 6, name: 'USB-C Hub 7 in 1', description: 'Hub mở rộng cổng kết nối HDMI, USB 3.0, Type-C, phù hợp laptop văn phòng.', price: '849000', quantity: 0, category: 2, category_detail: { id: 2, name: 'Phụ kiện máy tính' }, created_at: '2026-06-06T08:00:00Z', image: '/product-images/hub.svg' },
-]
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const orderingOptions = [
@@ -32,8 +16,13 @@ const orderingOptions = [
 const formatCurrency = (value) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0))
 
+const getProductPrice = (product) => product.price ?? product.selling_price ?? 0
+
 const getCategoryName = (product) =>
   product.category_detail?.name || product.category_name || `Danh mục #${product.category || 'N/A'}`
+
+const getSupplierName = (product) =>
+  product.supplier_detail?.name || product.supplier_name || (product.supplier ? `NCC #${product.supplier}` : 'Chưa gán')
 
 const productImageMap = {
   1: '/product-images/laptop.svg',
@@ -61,20 +50,125 @@ const getProductImage = (product) => {
   )
 }
 
-const getStockStatus = (quantity) => {
+const getStockStatus = (product) => {
+  const quantity = product?.quantity
+  const minimumStock = Number(product?.minimum_stock ?? 5)
   const v = Number(quantity || 0)
   if (v === 0) return { label: 'Hết hàng', className: 'danger' }
-  if (v <= 5) return { label: 'Sắp hết', className: 'warning' }
+  if (v <= minimumStock) return { label: 'Sắp hết', className: 'warning' }
   return { label: 'Còn hàng', className: 'success' }
+}
+
+const businessStatusMap = {
+  active: { label: 'Đang kinh doanh', className: 'active' },
+  inactive: { label: 'Tạm ngưng', className: 'inactive' },
+  discontinued: { label: 'Ngừng kinh doanh', className: 'discontinued' },
+}
+
+const getBusinessStatus = (product) =>
+  businessStatusMap[product?.status] || businessStatusMap.active
+
+async function refreshAccessToken(signal) {
+  const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
+  if (!refreshToken) return null
+
+  const response = await fetch(`${apiUrl}/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh: refreshToken }),
+    signal,
+  })
+
+  if (!response.ok) return null
+
+  const data = await response.json()
+  if (!data.access) return null
+
+  localStorage.setItem('access_token', data.access)
+  localStorage.setItem('accessToken', data.access)
+  return data.access
+}
+
+async function apiFetch(path, { signal } = {}) {
+  let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
+  if (!token) throw new Error('Bạn cần đăng nhập để xem danh sách sản phẩm.')
+
+  const request = (accessToken) => fetch(`${apiUrl}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
+  })
+
+  let response = await request(token)
+  if (response.status !== 401) return response
+
+  const newToken = await refreshAccessToken(signal)
+  if (!newToken) {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('refreshToken')
+    throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+  }
+
+  response = await request(newToken)
+  return response
+}
+
+async function apiJson(path, { method = 'GET', body, signal } = {}) {
+  let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
+  if (!token) throw new Error('Bạn cần đăng nhập để thực hiện thao tác này.')
+
+  const request = (accessToken) => fetch(`${apiUrl}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal,
+  })
+
+  let response = await request(token)
+  if (response.status === 401) {
+    const newToken = await refreshAccessToken(signal)
+    if (!newToken) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('refreshToken')
+      throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+    }
+    response = await request(newToken)
+  }
+
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const firstField = data && typeof data === 'object' ? Object.keys(data)[0] : ''
+    const firstError = firstField ? data[firstField] : null
+    const message = data.detail ||
+      (Array.isArray(firstError) ? `${firstField}: ${firstError[0]}` : '') ||
+      (typeof firstError === 'string' ? `${firstField}: ${firstError}` : '') ||
+      `Lỗi API: ${response.status}`
+    throw new Error(message)
+  }
+
+  return data
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function ProductListPage({ onStatsChange }) {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [suppliers, setSuppliers] = useState([])
   const [search, setSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedSupplier, setSelectedSupplier] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState('all')
   const [stockFilter, setStockFilter] = useState('all')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [minQuantity, setMinQuantity] = useState('')
+  const [maxQuantity, setMaxQuantity] = useState('')
   const [ordering, setOrdering] = useState('-created_at')
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
@@ -82,8 +176,17 @@ export default function ProductListPage({ onStatsChange }) {
   const [previousPage, setPreviousPage] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [isDemoMode, setIsDemoMode] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [updating, setUpdating] = useState(false)
+  const [editError, setEditError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -91,42 +194,50 @@ export default function ProductListPage({ onStatsChange }) {
     async function fetchProducts() {
       setLoading(true)
       setError('')
-      const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
       const params = new URLSearchParams({ page: String(page), ordering })
       if (search.trim()) params.set('search', search.trim())
       if (selectedCategory !== 'all') params.set('category', selectedCategory)
+      if (selectedSupplier !== 'all') params.set('supplier', selectedSupplier)
+      if (selectedStatus !== 'all') params.set('status', selectedStatus)
+      if (minPrice !== '') params.set('min_price', minPrice)
+      if (maxPrice !== '') params.set('max_price', maxPrice)
+      if (minQuantity !== '') params.set('min_quantity', minQuantity)
+      if (maxQuantity !== '') params.set('max_quantity', maxQuantity)
+      if (stockFilter === 'low-stock') params.set('low_stock', 'true')
+      if (stockFilter === 'out-of-stock') params.set('max_quantity', '0')
+      if (stockFilter === 'in-stock' && minQuantity === '') params.set('min_quantity', '1')
 
       try {
-        if (!token) throw new Error('Chưa có access token. Đang hiển thị dữ liệu mẫu.')
-
-        const headers = { Authorization: `Bearer ${token}` }
-        const [productRes, categoryRes] = await Promise.all([
-          fetch(`${apiUrl}/products/?${params}`, { headers, signal: controller.signal }),
-          fetch(`${apiUrl}/categories/`, { headers, signal: controller.signal }),
+        const [productRes, categoryRes, supplierRes] = await Promise.all([
+          apiFetch(`/products/?${params}`, { signal: controller.signal }),
+          apiFetch('/categories/', { signal: controller.signal }),
+          apiFetch('/suppliers/', { signal: controller.signal }),
         ])
 
-        if (!productRes.ok) throw new Error(`Lỗi API: ${productRes.status}`)
+        if (!productRes.ok) throw new Error(`Không thể tải sản phẩm. Mã lỗi: ${productRes.status}`)
 
         const productData = await productRes.json()
         const categoryData = categoryRes.ok ? await categoryRes.json() : []
+        const supplierData = supplierRes.ok ? await supplierRes.json() : []
         const apiProducts = Array.isArray(productData.results) ? productData.results : productData
         const apiCategories = Array.isArray(categoryData.results) ? categoryData.results : categoryData
+        const apiSuppliers = Array.isArray(supplierData.results) ? supplierData.results : supplierData
 
         setProducts(apiProducts)
         setCategories(apiCategories)
+        setSuppliers(apiSuppliers)
         setTotalCount(productData.count ?? apiProducts.length)
         setNextPage(productData.next || null)
         setPreviousPage(productData.previous || null)
-        setIsDemoMode(false)
       } catch (err) {
         if (err.name === 'AbortError') return
-        setProducts(demoProducts)
-        setCategories(demoCategories)
-        setTotalCount(demoProducts.length)
+        setProducts([])
+        setCategories([])
+        setSuppliers([])
+        setTotalCount(0)
         setNextPage(null)
         setPreviousPage(null)
-        setError(err.message)
-        setIsDemoMode(true)
+        setError(err.message || 'Không thể tải danh sách sản phẩm từ API.')
       } finally {
         setLoading(false)
       }
@@ -134,21 +245,30 @@ export default function ProductListPage({ onStatsChange }) {
 
     fetchProducts()
     return () => controller.abort()
-  }, [page, ordering, search, selectedCategory])
+  }, [
+    page,
+    ordering,
+    search,
+    selectedCategory,
+    selectedSupplier,
+    selectedStatus,
+    stockFilter,
+    minPrice,
+    maxPrice,
+    minQuantity,
+    maxQuantity,
+    refreshKey,
+  ])
 
   const filteredProducts = useMemo(() => {
-    let result = [...products]
-    if (stockFilter === 'in-stock') result = result.filter((p) => Number(p.quantity || 0) > 5)
-    if (stockFilter === 'low-stock') result = result.filter((p) => Number(p.quantity || 0) > 0 && Number(p.quantity || 0) <= 5)
-    if (stockFilter === 'out-of-stock') result = result.filter((p) => Number(p.quantity || 0) === 0)
-    return result
-  }, [products, stockFilter])
+    return [...products]
+  }, [products])
 
   // Expose stats lên App để dùng ở HomePage
   useEffect(() => {
     if (!onStatsChange) return
-    const totalValue = filteredProducts.reduce((sum, p) => sum + Number(p.price || 0) * Number(p.quantity || 0), 0)
-    const lowStock = filteredProducts.filter((p) => Number(p.quantity || 0) > 0 && Number(p.quantity || 0) <= 5).length
+    const totalValue = filteredProducts.reduce((sum, p) => sum + Number(getProductPrice(p)) * Number(p.quantity || 0), 0)
+    const lowStock = filteredProducts.filter((p) => Number(p.quantity || 0) > 0 && Number(p.quantity || 0) <= Number(p.minimum_stock ?? 5)).length
     onStatsChange({
       totalProducts: totalCount,
       totalQuantity: filteredProducts.reduce((sum, p) => sum + Number(p.quantity || 0), 0),
@@ -162,9 +282,77 @@ export default function ProductListPage({ onStatsChange }) {
   function resetFilters() {
     setSearch('')
     setSelectedCategory('all')
+    setSelectedSupplier('all')
+    setSelectedStatus('all')
     setStockFilter('all')
+    setMinPrice('')
+    setMaxPrice('')
+    setMinQuantity('')
+    setMaxQuantity('')
     setOrdering('-created_at')
     setPage(1)
+  }
+
+  async function handleCreateProduct(payload) {
+    setCreating(true)
+    setCreateError('')
+
+    try {
+      await apiJson('/products/', {
+        method: 'POST',
+        body: payload,
+      })
+      setShowAddModal(false)
+      setPage(1)
+      setOrdering('-created_at')
+      setRefreshKey((value) => value + 1)
+    } catch (requestError) {
+      setCreateError(requestError.message || 'Không thể thêm sản phẩm. Vui lòng thử lại.')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  async function handleUpdateProduct(payload) {
+    if (!editingProduct) return
+
+    setUpdating(true)
+    setEditError('')
+
+    try {
+      await apiJson(`/products/${editingProduct.id}/`, {
+        method: 'PATCH',
+        body: payload,
+      })
+      setEditingProduct(null)
+      setRefreshKey((value) => value + 1)
+    } catch (requestError) {
+      setEditError(requestError.message || 'Không thể cập nhật sản phẩm. Vui lòng thử lại.')
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  async function handleDeleteProduct() {
+    if (!deleteTarget) return
+
+    setDeleting(true)
+    setDeleteError('')
+
+    try {
+      await apiJson(`/products/${deleteTarget.id}/`, {
+        method: 'DELETE',
+      })
+      setDeleteTarget(null)
+      setRefreshKey((value) => value + 1)
+    } catch (requestError) {
+      setDeleteError(
+        requestError.message ||
+        'Không thể xóa sản phẩm. Nếu sản phẩm đã có phiếu kho hoặc dữ liệu liên quan, hãy đổi trạng thái thay vì xóa.'
+      )
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -218,21 +406,93 @@ export default function ProductListPage({ onStatsChange }) {
         </button>
       </div>
 
+      <div className="plp-filter-bar plp-advanced-filter-bar">
+        <label className="plp-filter-item">
+          <span>Nhà cung cấp</span>
+          <select value={selectedSupplier} onChange={(e) => { setSelectedSupplier(e.target.value); setPage(1) }}>
+            <option value="all">Tất cả nhà cung cấp</option>
+            {suppliers.map((supplier) => (
+              <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="plp-filter-item">
+          <span>Kinh doanh</span>
+          <select value={selectedStatus} onChange={(e) => { setSelectedStatus(e.target.value); setPage(1) }}>
+            <option value="all">Tất cả trạng thái</option>
+            <option value="active">Đang kinh doanh</option>
+            <option value="inactive">Tạm ngưng</option>
+            <option value="discontinued">Ngừng kinh doanh</option>
+          </select>
+        </label>
+
+        <label className="plp-filter-item">
+          <span>Giá từ</span>
+          <input
+            type="number"
+            min="0"
+            value={minPrice}
+            onChange={(e) => { setMinPrice(e.target.value); setPage(1) }}
+            placeholder="0"
+          />
+        </label>
+
+        <label className="plp-filter-item">
+          <span>Giá đến</span>
+          <input
+            type="number"
+            min="0"
+            value={maxPrice}
+            onChange={(e) => { setMaxPrice(e.target.value); setPage(1) }}
+            placeholder="Không giới hạn"
+          />
+        </label>
+
+        <label className="plp-filter-item">
+          <span>SL từ</span>
+          <input
+            type="number"
+            min="0"
+            value={minQuantity}
+            onChange={(e) => { setMinQuantity(e.target.value); setPage(1) }}
+            placeholder="0"
+          />
+        </label>
+
+        <label className="plp-filter-item">
+          <span>SL đến</span>
+          <input
+            type="number"
+            min="0"
+            value={maxQuantity}
+            onChange={(e) => { setMaxQuantity(e.target.value); setPage(1) }}
+            placeholder="Không giới hạn"
+          />
+        </label>
+      </div>
+
       {/* Banners */}
-      {error && <div className="plp-notice error">⚠ {error}</div>}
-      {isDemoMode && (
-        <div className="plp-notice info">
-          Đang hiển thị dữ liệu mẫu. Lưu access token vào localStorage để kết nối API thật.
-        </div>
-      )}
+      {error && <div className="plp-notice error">{error}</div>}
 
       {/* Table */}
       <div className="plp-table-card">
         <div className="plp-table-head">
           <span className="plp-count">{totalCount} sản phẩm</span>
-          <span className={`plp-mode-dot ${isDemoMode ? 'demo' : 'api'}`}>
-            {isDemoMode ? 'Demo' : 'API'}
-          </span>
+          <div className="plp-table-actions">
+            <span className="plp-mode-dot api">API</span>
+            <button
+              type="button"
+              className="plp-add-btn"
+              onClick={() => {
+                setCreateError('')
+                setShowAddModal(true)
+              }}
+            >
+              <span>+</span>
+              Thêm sản phẩm
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -251,16 +511,19 @@ export default function ProductListPage({ onStatsChange }) {
               <thead>
                 <tr>
                   <th>Sản phẩm</th>
+                  <th>SKU</th>
                   <th>Danh mục</th>
+                  <th>Nhà cung cấp</th>
                   <th>Giá</th>
                   <th>Số lượng</th>
+                  <th>Kinh doanh</th>
                   <th>Trạng thái</th>
                   <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProducts.map((product) => {
-                  const stock = getStockStatus(product.quantity)
+                  const stock = getStockStatus(product)
                   return (
                     <tr key={product.id}>
                       <td>
@@ -275,21 +538,54 @@ export default function ProductListPage({ onStatsChange }) {
                         </div>
                       </td>
                       <td>
+                        <span className="plp-code">{product.sku || `#${product.id}`}</span>
+                      </td>
+                      <td>
                         <span className="plp-category-tag">{getCategoryName(product)}</span>
                       </td>
-                      <td><strong className="plp-price">{formatCurrency(product.price)}</strong></td>
+                      <td>
+                        <span className="plp-supplier">{getSupplierName(product)}</span>
+                      </td>
+                      <td><strong className="plp-price">{formatCurrency(getProductPrice(product))}</strong></td>
                       <td><span className="plp-qty">{product.quantity}</span></td>
+                      <td>
+                        <span className={`plp-business-pill ${getBusinessStatus(product).className}`}>
+                          {getBusinessStatus(product).label}
+                        </span>
+                      </td>
                       <td>
                         <span className={`plp-status-pill ${stock.className}`}>{stock.label}</span>
                       </td>
                       <td>
-                        <button
-                          className="plp-detail-btn"
-                          type="button"
-                          onClick={() => setSelectedProduct(product)}
-                        >
-                          Chi tiết
-                        </button>
+                        <div className="plp-row-actions">
+                          <button
+                            className="plp-action-btn detail"
+                            type="button"
+                            onClick={() => setSelectedProduct(product)}
+                          >
+                            Chi tiết
+                          </button>
+                          <button
+                            className="plp-action-btn edit"
+                            type="button"
+                            onClick={() => {
+                              setEditError('')
+                              setEditingProduct(product)
+                            }}
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            className="plp-action-btn delete"
+                            type="button"
+                            onClick={() => {
+                              setDeleteError('')
+                              setDeleteTarget(product)
+                            }}
+                          >
+                            Xóa
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -305,14 +601,14 @@ export default function ProductListPage({ onStatsChange }) {
           <div className="plp-pagination-btns">
             <button
               type="button"
-              disabled={page === 1 || (!isDemoMode && !previousPage)}
+              disabled={page === 1 || !previousPage}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
             >
               ← Trước
             </button>
             <button
               type="button"
-              disabled={page >= totalPages || (!isDemoMode && !nextPage)}
+              disabled={page >= totalPages || !nextPage}
               onClick={() => setPage((p) => p + 1)}
             >
               Sau →
@@ -362,20 +658,169 @@ export default function ProductListPage({ onStatsChange }) {
               </div>
               <div className="plp-modal-item">
                 <span>Giá</span>
-                <strong>{formatCurrency(selectedProduct.price)}</strong>
+                <strong>{formatCurrency(getProductPrice(selectedProduct))}</strong>
               </div>
               <div className="plp-modal-item">
                 <span>Số lượng</span>
                 <strong>{selectedProduct.quantity}</strong>
               </div>
               <div className="plp-modal-item">
-                <span>Trạng thái</span>
-                <strong>{getStockStatus(selectedProduct.quantity).label}</strong>
+                <span>SKU</span>
+                <strong>{selectedProduct.sku || `#${selectedProduct.id}`}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Nhà cung cấp</span>
+                <strong>{getSupplierName(selectedProduct)}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Tồn tối thiểu</span>
+                <strong>{selectedProduct.minimum_stock ?? 0}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Kinh doanh</span>
+                <strong>{getBusinessStatus(selectedProduct).label}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Tồn kho</span>
+                <strong>{getStockStatus(selectedProduct).label}</strong>
               </div>
             </div>
+          </section>
+        </div>
+      )}
 
-            <div className="plp-modal-note">
-              Màn hình xem chi tiết — chức năng thêm/sửa/xóa do thành viên khác phụ trách.
+      {showAddModal && (
+        <div
+          className="plp-modal-backdrop"
+          role="presentation"
+          onClick={() => !creating && setShowAddModal(false)}
+        >
+          <section
+            className="plp-modal plp-form-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="plp-modal-header">
+              <div>
+                <span className="plp-modal-eyebrow">Quản lý sản phẩm</span>
+                <h2>Thêm sản phẩm</h2>
+              </div>
+              <button
+                className="plp-modal-close"
+                type="button"
+                aria-label="Đóng"
+                disabled={creating}
+                onClick={() => setShowAddModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {createError && <div className="plp-notice error">{createError}</div>}
+
+            <ProductForm
+              onSubmit={handleCreateProduct}
+              onCancel={() => setShowAddModal(false)}
+              loading={creating}
+            />
+          </section>
+        </div>
+      )}
+
+      {editingProduct && (
+        <div
+          className="plp-modal-backdrop"
+          role="presentation"
+          onClick={() => !updating && setEditingProduct(null)}
+        >
+          <section
+            className="plp-modal plp-form-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="plp-modal-header">
+              <div>
+                <span className="plp-modal-eyebrow">Quản lý sản phẩm</span>
+                <h2>Sửa sản phẩm</h2>
+              </div>
+              <button
+                className="plp-modal-close"
+                type="button"
+                aria-label="Đóng"
+                disabled={updating}
+                onClick={() => setEditingProduct(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            {editError && <div className="plp-notice error">{editError}</div>}
+
+            <ProductForm
+              initialData={editingProduct}
+              onSubmit={handleUpdateProduct}
+              onCancel={() => setEditingProduct(null)}
+              loading={updating}
+            />
+          </section>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div
+          className="plp-modal-backdrop"
+          role="presentation"
+          onClick={() => !deleting && setDeleteTarget(null)}
+        >
+          <section
+            className="plp-modal plp-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="plp-modal-header">
+              <div>
+                <span className="plp-modal-eyebrow">Xác nhận xóa</span>
+                <h2>{deleteTarget.name}</h2>
+              </div>
+              <button
+                className="plp-modal-close"
+                type="button"
+                aria-label="Đóng"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            {deleteError && <div className="plp-notice error">{deleteError}</div>}
+
+            <p className="plp-delete-text">
+              Bạn muốn xóa sản phẩm này khỏi hệ thống? Nếu sản phẩm đã xuất hiện
+              trong phiếu nhập, phiếu xuất hoặc dữ liệu nghiệp vụ khác, hệ thống
+              sẽ không cho xóa để giữ lịch sử chính xác.
+            </p>
+
+            <div className="plp-delete-actions">
+              <button
+                type="button"
+                className="plp-delete-cancel"
+                disabled={deleting}
+                onClick={() => setDeleteTarget(null)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="plp-delete-confirm"
+                disabled={deleting}
+                onClick={handleDeleteProduct}
+              >
+                {deleting ? 'Đang xóa...' : 'Xóa sản phẩm'}
+              </button>
             </div>
           </section>
         </div>
