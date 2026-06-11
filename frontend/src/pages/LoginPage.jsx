@@ -36,7 +36,12 @@ function LoginPage() {
 
     setLoading(true)
     try {
-      await login(form.username, form.password)
+      const authData = await login(form.username, form.password)
+      console.log('Login success:', {
+        username: form.username,
+        hasAccessToken: Boolean(authData.access),
+        hasRefreshToken: Boolean(authData.refresh),
+      })
       navigate('/products')
     } catch (err) {
       const msg =
