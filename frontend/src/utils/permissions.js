@@ -16,7 +16,7 @@ export const PAGE_PERMISSION_RULES = {
   'adjustment-orders': { any: ['inventory.add_stocktransaction'] },
   'transaction-history': { any: ['inventory.view_stocktransaction'] },
 
-  'report-overview': { any: ['products.view_product', 'inventory.view_stocktransaction'] },
+  'report-overview': { all: ['products.view_product', 'inventory.view_warehouse', 'inventory.view_stocktransaction'] },
   'report-low-stock': { any: ['products.view_product'] },
   'report-value': { any: ['products.view_product'] },
 
@@ -41,6 +41,7 @@ export function canAccessPage(user, pageKey) {
   if (!user) return false
   if (user.is_superuser) return true
   if (rule.systemAdmin) return isSystemAdmin(user)
+  if (rule.all?.length) return rule.all.every((permission) => hasAnyPermission(user, [permission]))
   if (rule.any?.length) return hasAnyPermission(user, rule.any)
   return false
 }

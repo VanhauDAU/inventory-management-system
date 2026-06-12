@@ -6,6 +6,7 @@ import CategoryPage from './pages/categories/CategoryPage'
 import SupplierPage from './pages/suppliers/SupplierPage'
 import WarehousePage from './pages/warehouses/WarehousePage'
 import StockTransactionPage from './pages/stock-transactions/StockTransactionPage'
+import InventoryOverviewPage from './pages/reports/InventoryOverviewPage'
 import UserManagementPage from './pages/system/UserManagementPage'
 import RoleManagementPage from './pages/system/RoleManagementPage'
 import PlaceholderPage from './components/common/PlaceholderPage'
@@ -97,7 +98,7 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout, curre
       return <StockTransactionPage transactionType="all" />
 
     case 'report-overview':
-      return <PlaceholderPage title="Tổng quan tồn kho" description="Báo cáo tổng hợp về tình hình tồn kho hiện tại." icon="📊" />
+      return <InventoryOverviewPage onNavigate={onNavigate} />
 
     case 'report-low-stock':
       return <PlaceholderPage title="Sản phẩm sắp hết hàng" description="Danh sách các sản phẩm có số lượng tồn kho thấp cần nhập thêm." icon="⚠️" />
