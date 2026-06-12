@@ -643,8 +643,9 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
   }, [warehouseStocks])
 
   const availableProducts = useMemo(() => {
-    if (transactionType !== 'export') return products
-    return products.filter((product) => Number(stockMap.get(String(product.id))?.quantity || 0) > 0)
+    const activeProducts = products.filter((product) => product.status === 'active')
+    if (transactionType !== 'export') return activeProducts
+    return activeProducts.filter((product) => Number(stockMap.get(String(product.id))?.quantity || 0) > 0)
   }, [products, stockMap, transactionType])
 
   const selectedProductIds = useMemo(() => {

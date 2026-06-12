@@ -146,6 +146,38 @@ class InventoryAPITests(APITestCase):
         self.product.refresh_from_db()
         self.assertEqual(self.product.quantity, 15)
 
+    def test_stock_transaction_rejects_inactive_product(self):
+        self.client.force_authenticate(user=self.user)
+        inactive_product = Product.objects.create(
+            sku="INACTIVE-001",
+            name="Inactive product",
+            category=self.category,
+            supplier=self.supplier,
+            cost_price=Decimal("40.00"),
+            selling_price=Decimal("55.00"),
+            status=Product.Status.INACTIVE,
+        )
+
+        response = self.client.post(
+            "/api/stock-transactions/",
+            {
+                "warehouse": self.warehouse.id,
+                "transaction_type": StockTransaction.TransactionType.IMPORT,
+                "transaction_code": "IMPORT-INACTIVE",
+                "items": [
+                    {
+                        "product": inactive_product.id,
+                        "quantity": 5,
+                        "unit_price": "40.00",
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Only active products", str(response.data))
+
     def test_authenticated_user_can_create_export_transaction(self):
         self.client.force_authenticate(user=self.user)
         WarehouseStock.objects.create(
