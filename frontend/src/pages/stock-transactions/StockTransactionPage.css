@@ -796,21 +796,42 @@
   background: #dbeafe;
 }
 
-.stock-detail-btn {
+.stock-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.stock-detail-btn,
+.stock-export-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 30px;
   padding: 0 0.75rem;
-  border: 1px solid #2563eb;
   border-radius: 8px;
-  background: #ffffff;
-  color: #2563eb;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.stock-detail-btn {
+  border: 1px solid #2563eb;
+  background: #ffffff;
+  color: #2563eb;
+}
+
+.stock-export-btn {
+  border: 1px solid #16a34a;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.stock-export-btn:hover {
+  background: #dcfce7;
 }
 
 .stock-type {
@@ -946,7 +967,13 @@
   color: #0f172a;
 }
 
-.stock-modal-header button {
+.stock-modal-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stock-modal-header .stock-modal-actions > button:last-child {
   display: grid;
   width: 34px;
   height: 34px;
@@ -958,6 +985,16 @@
   font: inherit;
   font-size: 1.2rem;
   cursor: pointer;
+}
+
+.stock-modal-header .stock-modal-actions .stock-export-btn {
+  width: auto;
+  height: 34px;
+  border: 1px solid #16a34a;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #15803d;
+  font-size: 0.78rem;
 }
 
 .stock-detail-summary {
