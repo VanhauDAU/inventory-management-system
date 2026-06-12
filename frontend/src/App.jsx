@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import ProductListPage from './pages/products/ProductListPage'
@@ -6,8 +6,12 @@ import CategoryPage from './pages/categories/CategoryPage'
 import SupplierPage from './pages/suppliers/SupplierPage'
 import WarehousePage from './pages/warehouses/WarehousePage'
 import StockTransactionPage from './pages/stock-transactions/StockTransactionPage'
+import UserManagementPage from './pages/system/UserManagementPage'
+import RoleManagementPage from './pages/system/RoleManagementPage'
 import PlaceholderPage from './components/common/PlaceholderPage'
 import LoginPage from './pages/LoginPage'
+import api from './services/api'
+import { canAccessPage } from './utils/permissions'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HƯỚNG DẪN TÍCH HỢP VỚI BRANCH feature/frontend-ui (module đăng nhập)
@@ -36,8 +40,25 @@ function checkAuth() {
   )
 }
 
+function getStoredCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem('current_user') || 'null')
+  } catch {
+    localStorage.removeItem('current_user')
+    return null
+  }
+}
+
 // ── Map pageKey -> component ──────────────────────────────────────────────────
-function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
+function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout, currentUser, authReady }) {
+  if (!canAccessPage(currentUser, pageKey)) {
+    if (!authReady && pageKey !== 'home') {
+      return <PlaceholderPage title="Đang kiểm tra quyền" description="Hệ thống đang đồng bộ quyền truy cập của tài khoản." icon="⏳" />
+    }
+
+    return <PlaceholderPage title="Không có quyền truy cập" description="Tài khoản của bạn chưa được cấp quyền sử dụng chức năng này." icon="🔒" />
+  }
+
   switch (pageKey) {
     case 'home':
       return <HomePage stats={stats} onStatsChange={onStatsChange} onNavigate={onNavigate} />
@@ -85,10 +106,10 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
       return <PlaceholderPage title="Giá trị tồn kho" description="Báo cáo giá trị tổng tồn kho theo danh mục và thời gian." icon="💰" />
 
     case 'system-users':
-      return <PlaceholderPage title="Người dùng" description="Quản lý tài khoản người dùng trong hệ thống." icon="👤" />
+      return <UserManagementPage />
 
     case 'system-roles':
-      return <PlaceholderPage title="Nhóm quyền" description="Phân quyền theo nhóm: admin, nhân viên kho, kế toán..." icon="🔑" />
+      return <RoleManagementPage />
 
     // Khi bấm Đăng xuất: xóa token và về trang login
     case 'system-logout':
@@ -107,6 +128,8 @@ export default function App() {
   const [activePage, setActivePage] = useState('home')
   const [isDemoMode, setIsDemoMode] = useState(!checkAuth())
   const [stats, setStats] = useState(null)
+  const [currentUser, setCurrentUser] = useState(() => getStoredCurrentUser())
+  const [authReady, setAuthReady] = useState(false)
 
   const handleStatsChange = useCallback((newStats) => {
     setStats(newStats)
@@ -118,6 +141,7 @@ export default function App() {
     setIsLoggedIn(true)
     setIsDemoMode(!checkAuth())
     setActivePage('home')
+    setAuthReady(false)
   }
 
   // Gọi khi đăng xuất
@@ -131,8 +155,32 @@ export default function App() {
     setIsLoggedIn(false)
     setActivePage('home')
     setStats(null)
+    setCurrentUser(null)
+    setAuthReady(false)
     setIsDemoMode(true)
   }
+
+  useEffect(() => {
+    if (!isLoggedIn) return
+
+    const controller = new AbortController()
+    setAuthReady(false)
+
+    api.get('/me/', { signal: controller.signal })
+      .then((response) => {
+        setCurrentUser(response.data)
+        localStorage.setItem('current_user', JSON.stringify(response.data))
+      })
+      .catch((error) => {
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') return
+        setCurrentUser(getStoredCurrentUser())
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAuthReady(true)
+      })
+
+    return () => controller.abort()
+  }, [isLoggedIn])
 
   // ── Chưa đăng nhập → hiển thị LoginPage ────────────────────────────────────
   if (!isLoggedIn) {
@@ -152,6 +200,8 @@ export default function App() {
         stats,
         onStatsChange: handleStatsChange,
         onLogout: handleLogout,
+        currentUser,
+        authReady,
       })}
     </AppLayout>
   )

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { canAccessPage } from '../../utils/permissions'
 import './Sidebar.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -242,6 +243,7 @@ export default function Sidebar({ activePage, onNavigate, className = '' }) {
         {menuGroups.map((group) => {
           // Mục đơn (Trang chủ)
           if (group.single) {
+            if (!canAccessPage(currentUser, group.pageKey)) return null
             const isActive = activePage === group.pageKey
             return (
               <button
@@ -258,8 +260,11 @@ export default function Sidebar({ activePage, onNavigate, className = '' }) {
           }
 
           // Nhóm có menu con
+          const visibleChildren = group.children?.filter((child) => canAccessPage(currentUser, child.key)) || []
+          if (visibleChildren.length === 0) return null
+
           const isGroupOpen = !!openGroups[group.key]
-          const hasActiveChild = group.children?.some((child) => child.key === activePage)
+          const hasActiveChild = visibleChildren?.some((child) => child.key === activePage)
 
           return (
             <div key={group.key} className={`sidebar-group${hasActiveChild ? ' has-active' : ''}`}>
@@ -280,7 +285,7 @@ export default function Sidebar({ activePage, onNavigate, className = '' }) {
 
               {isGroupOpen && (
                 <ul className="sidebar-submenu" role="list">
-                  {group.children.map((child) => {
+                  {visibleChildren.map((child) => {
                     const isActive = activePage === child.key
                     return (
                       <li key={child.key} role="listitem">

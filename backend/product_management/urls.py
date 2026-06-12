@@ -30,7 +30,7 @@ from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from accounts.views import current_user
+from accounts.views import PermissionViewSet, RoleViewSet, UserViewSet, current_user
 from categories.views import CategoryViewSet
 from inventory.views import (
     StockTransactionItemViewSet,
@@ -42,6 +42,9 @@ from products.views import ProductViewSet
 from suppliers.views import SupplierViewSet
 
 router = DefaultRouter()
+router.register(r"users", UserViewSet, basename="user")
+router.register(r"roles", RoleViewSet, basename="role")
+router.register(r"permissions", PermissionViewSet, basename="permission")
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"suppliers", SupplierViewSet, basename="supplier")
