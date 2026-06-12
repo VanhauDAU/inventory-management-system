@@ -40,7 +40,7 @@ function checkAuth() {
 function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
   switch (pageKey) {
     case 'home':
-      return <HomePage stats={stats} onNavigate={onNavigate} />
+      return <HomePage stats={stats} onStatsChange={onStatsChange} onNavigate={onNavigate} />
 
     case 'product-list':
       return <ProductListPage onStatsChange={onStatsChange} />
