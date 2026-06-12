@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -15,6 +15,9 @@ class ProductAPITests(APITestCase):
         self.user = User.objects.create_user(
             username="manager",
             password="managerpass123",
+        )
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label__in=["products", "inventory"])
         )
         self.category = Category.objects.create(name="Electronics")
 

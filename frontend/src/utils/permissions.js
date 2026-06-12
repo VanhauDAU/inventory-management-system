@@ -20,12 +20,12 @@ export const PAGE_PERMISSION_RULES = {
   'report-low-stock': { any: ['products.view_product'] },
   'report-value': { any: ['products.view_product'] },
 
-  'system-users': { systemAdmin: true },
-  'system-roles': { systemAdmin: true },
+  'system-users': { any: ['auth.view_user'] },
+  'system-roles': { any: ['auth.view_group'] },
 }
 
 export function isSystemAdmin(user) {
-  return !!(user?.is_staff || user?.is_superuser)
+  return hasAnyPermission(user, ['auth.view_user', 'auth.view_group'])
 }
 
 export function hasAnyPermission(user, permissions = []) {

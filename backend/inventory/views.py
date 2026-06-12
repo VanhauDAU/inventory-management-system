@@ -3,9 +3,9 @@ from django.db.models import ProtectedError
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.permissions import ViewDjangoModelPermissions
 from .models import StockTransaction, StockTransactionItem, Warehouse, WarehouseStock
 from .serializers import (
     StockTransactionItemSerializer,
@@ -65,7 +65,7 @@ from .serializers import (
 class WarehouseViewSet(viewsets.ModelViewSet):
     queryset = Warehouse.objects.prefetch_related("stock_items").all().order_by("id")
     serializer_class = WarehouseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["is_active"]
     search_fields = ["name", "address", "phone", "manager_name"]
@@ -165,7 +165,7 @@ class WarehouseStockViewSet(viewsets.ReadOnlyModelViewSet):
         .order_by("warehouse__name", "product__name")
     )
     serializer_class = WarehouseStockSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["warehouse", "product"]
     search_fields = ["warehouse__name", "product__sku", "product__name"]
@@ -215,7 +215,7 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
         .order_by("-created_at", "-id")
     )
     serializer_class = StockTransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["warehouse", "transaction_type", "created_by"]
     search_fields = ["transaction_code", "reason", "note"]
@@ -246,7 +246,7 @@ class StockTransactionItemViewSet(viewsets.ReadOnlyModelViewSet):
         .order_by("id")
     )
     serializer_class = StockTransactionItemSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["stock_transaction", "product"]
     search_fields = [

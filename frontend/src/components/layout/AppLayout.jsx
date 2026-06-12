@@ -3,7 +3,7 @@ import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import './AppLayout.css'
 
-export default function AppLayout({ activePage, onNavigate, isDemoMode, apiUrl, children }) {
+export default function AppLayout({ activePage, onNavigate, isDemoMode, apiUrl, currentUser, authReady, children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   function handleNavigate(pageKey) {
@@ -26,6 +26,8 @@ export default function AppLayout({ activePage, onNavigate, isDemoMode, apiUrl, 
         activePage={activePage}
         onNavigate={handleNavigate}
         className={sidebarOpen ? 'open' : ''}
+        currentUser={currentUser}
+        authReady={authReady}
       />
 
       <div className="app-main">

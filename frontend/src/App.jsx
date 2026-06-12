@@ -138,9 +138,11 @@ export default function App() {
 
   // Gọi khi đăng nhập thành công (LoginPage sẽ gọi hàm này)
   function handleLogin() {
+    localStorage.removeItem('current_user')
     setIsLoggedIn(true)
     setIsDemoMode(!checkAuth())
     setActivePage('home')
+    setCurrentUser(null)
     setAuthReady(false)
   }
 
@@ -194,6 +196,8 @@ export default function App() {
       onNavigate={setActivePage}
       isDemoMode={isDemoMode}
       apiUrl={apiUrl}
+      currentUser={currentUser}
+      authReady={authReady}
     >
       {renderPage(activePage, {
         onNavigate: setActivePage,

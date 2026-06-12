@@ -172,8 +172,8 @@ function getStoredUser() {
   return username ? { username, full_name: username } : null
 }
 
-export default function Sidebar({ activePage, onNavigate, className = '' }) {
-  const [currentUser, setCurrentUser] = useState(() => getStoredUser())
+export default function Sidebar({ activePage, onNavigate, className = '', currentUser: currentUserProp = undefined, authReady = false }) {
+  const [currentUser, setCurrentUser] = useState(() => currentUserProp || getStoredUser())
   const [userError, setUserError] = useState('')
 
   // Tìm group đang active để mở sẵn
@@ -191,6 +191,12 @@ export default function Sidebar({ activePage, onNavigate, className = '' }) {
   })
 
   useEffect(() => {
+    if (currentUserProp !== undefined) {
+      setCurrentUser(currentUserProp)
+      setUserError(authReady && !currentUserProp ? 'Chưa đồng bộ từ DB' : '')
+      return undefined
+    }
+
     const controller = new AbortController()
 
     fetchCurrentUser(controller.signal)
@@ -206,7 +212,7 @@ export default function Sidebar({ activePage, onNavigate, className = '' }) {
       })
 
     return () => controller.abort()
-  }, [])
+  }, [authReady, currentUserProp])
 
   function toggleGroup(key) {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))

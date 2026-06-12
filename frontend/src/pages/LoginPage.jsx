@@ -53,6 +53,7 @@ function LoginPage({ onLogin }) {
         )
       }
 
+      localStorage.removeItem('current_user')
       localStorage.setItem('access_token', data.access)
       localStorage.setItem('refresh_token', data.refresh)
       localStorage.setItem('current_username', form.username.trim())

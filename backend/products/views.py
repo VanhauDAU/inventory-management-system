@@ -5,9 +5,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, parsers, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.permissions import ViewDjangoModelPermissions
 from inventory.models import StockTransactionItem
 from inventory.serializers import StockTransactionItemSerializer
 
@@ -94,7 +94,7 @@ class ProductFilter(django_filters.FilterSet):
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category", "supplier").all().order_by("id")
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
     parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
     filter_backends = [
         DjangoFilterBackend,

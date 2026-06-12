@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -9,7 +9,7 @@ from categories.models import Category
 from products.models import Product
 from suppliers.models import Supplier
 
-from .models import StockTransaction, StockTransactionItem, Warehouse
+from .models import StockTransaction, StockTransactionItem, Warehouse, WarehouseStock
 
 
 class InventoryModelTests(TestCase):
@@ -58,6 +58,9 @@ class InventoryAPITests(APITestCase):
         self.user = User.objects.create_user(
             username="inventory-manager",
             password="managerpass123",
+        )
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label__in=["inventory", "products"])
         )
         self.category = Category.objects.create(name="Electronics")
         self.supplier = Supplier.objects.create(name="Supplier A")
@@ -145,6 +148,11 @@ class InventoryAPITests(APITestCase):
 
     def test_authenticated_user_can_create_export_transaction(self):
         self.client.force_authenticate(user=self.user)
+        WarehouseStock.objects.create(
+            warehouse=self.warehouse,
+            product=self.product,
+            quantity=10,
+        )
 
         response = self.client.post(
             "/api/stock-transactions/",
