@@ -17,7 +17,7 @@ class Product(models.Model):
     barcode = models.CharField(max_length=100, unique=True, blank=True, null=True)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    image = models.URLField(max_length=500, blank=True)
+    image = models.ImageField(upload_to="products/", blank=True)
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,

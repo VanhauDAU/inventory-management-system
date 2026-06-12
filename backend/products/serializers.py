@@ -54,6 +54,9 @@ class ProductSerializer(serializers.ModelSerializer):
         if "selling_price" not in attrs and legacy_price is not None:
             attrs["selling_price"] = legacy_price
 
+        if attrs.get("barcode") == "":
+            attrs["barcode"] = None
+
         if self.instance is None and "selling_price" not in attrs:
             raise serializers.ValidationError(
                 {"selling_price": "This field is required."}

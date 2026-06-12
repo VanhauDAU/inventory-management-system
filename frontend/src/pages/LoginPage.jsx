@@ -68,7 +68,7 @@ function LoginPage({ onLogin }) {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">📦</div>
-          <h1 className="login-title">Quản lý sản phẩm</h1>
+          <h1 className="login-title">Quản lý sản phẩm thông minh</h1>
           <p className="login-subtitle">Đăng nhập để tiếp tục</p>
         </div>
 

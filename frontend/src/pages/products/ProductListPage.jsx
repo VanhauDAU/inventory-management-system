@@ -16,6 +16,14 @@ const orderingOptions = [
 const formatCurrency = (value) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0))
 
+const formatDateTime = (value) => {
+  if (!value) return 'Chưa có'
+  return new Intl.DateTimeFormat('vi-VN', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
 const getProductPrice = (product) => product.price ?? product.selling_price ?? 0
 
 const getCategoryName = (product) =>
@@ -68,6 +76,18 @@ const businessStatusMap = {
 const getBusinessStatus = (product) =>
   businessStatusMap[product?.status] || businessStatusMap.active
 
+const unitLabelMap = {
+  piece: 'Cái',
+  box: 'Hộp',
+  pack: 'Gói',
+  set: 'Bộ',
+  kg: 'Kg',
+  meter: 'Mét',
+  liter: 'Lít',
+}
+
+const getUnitLabel = (unit) => unitLabelMap[unit] || unit || 'Chưa có'
+
 async function refreshAccessToken(signal) {
   const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
   if (!refreshToken) return null
@@ -114,17 +134,44 @@ async function apiFetch(path, { signal } = {}) {
   return response
 }
 
+function getApiErrorMessage(data, fallbackStatus) {
+  if (data?.detail) return data.detail
+
+  const firstField = data && typeof data === 'object' ? Object.keys(data)[0] : ''
+  const firstError = firstField ? data[firstField] : null
+  const rawMessage =
+    (Array.isArray(firstError) ? firstError[0] : '') ||
+    (typeof firstError === 'string' ? firstError : '') ||
+    ''
+
+  if (firstField === 'image' && rawMessage.toLowerCase().includes('valid url')) {
+    return 'Ảnh sản phẩm chưa được upload đúng kiểu file. Cần chạy migration ImageField và restart backend trước khi thêm sản phẩm.'
+  }
+
+  if (firstField === 'image') {
+    return `Ảnh sản phẩm: ${rawMessage || 'Không hợp lệ.'}`
+  }
+
+  if (firstField === 'barcode') {
+    return `Barcode: ${rawMessage || 'Không hợp lệ hoặc đã tồn tại.'}`
+  }
+
+  if (firstField && rawMessage) return `${firstField}: ${rawMessage}`
+  return `Lỗi API: ${fallbackStatus}`
+}
+
 async function apiJson(path, { method = 'GET', body, signal } = {}) {
   let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
   if (!token) throw new Error('Bạn cần đăng nhập để thực hiện thao tác này.')
+  const isFormData = body instanceof FormData
 
   const request = (accessToken) => fetch(`${apiUrl}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
     signal,
   })
 
@@ -143,16 +190,25 @@ async function apiJson(path, { method = 'GET', body, signal } = {}) {
 
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
-    const firstField = data && typeof data === 'object' ? Object.keys(data)[0] : ''
-    const firstError = firstField ? data[firstField] : null
-    const message = data.detail ||
-      (Array.isArray(firstError) ? `${firstField}: ${firstError[0]}` : '') ||
-      (typeof firstError === 'string' ? `${firstField}: ${firstError}` : '') ||
-      `Lỗi API: ${response.status}`
-    throw new Error(message)
+    throw new Error(getApiErrorMessage(data, response.status))
   }
 
   return data
+}
+
+function createProductFormData(payload) {
+  const formData = new FormData()
+
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value === undefined) return
+    if (value === null) {
+      formData.append(key, '')
+      return
+    }
+    formData.append(key, value)
+  })
+
+  return formData
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -187,6 +243,21 @@ export default function ProductListPage({ onStatsChange }) {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [toast, setToast] = useState(null)
+
+  function showToast(type, message) {
+    setToast({ id: Date.now(), type, message })
+  }
+
+  useEffect(() => {
+    if (!toast) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      setToast((current) => (current?.id === toast.id ? null : current))
+    }, toast.type === 'error' ? 6000 : 3500)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [toast])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -300,14 +371,17 @@ export default function ProductListPage({ onStatsChange }) {
     try {
       await apiJson('/products/', {
         method: 'POST',
-        body: payload,
+        body: createProductFormData(payload),
       })
       setShowAddModal(false)
       setPage(1)
       setOrdering('-created_at')
       setRefreshKey((value) => value + 1)
+      showToast('success', 'Đã thêm sản phẩm thành công.')
     } catch (requestError) {
-      setCreateError(requestError.message || 'Không thể thêm sản phẩm. Vui lòng thử lại.')
+      const message = requestError.message || 'Không thể thêm sản phẩm. Vui lòng thử lại.'
+      setCreateError(message)
+      showToast('error', message)
     } finally {
       setCreating(false)
     }
@@ -322,12 +396,15 @@ export default function ProductListPage({ onStatsChange }) {
     try {
       await apiJson(`/products/${editingProduct.id}/`, {
         method: 'PATCH',
-        body: payload,
+        body: createProductFormData(payload),
       })
       setEditingProduct(null)
       setRefreshKey((value) => value + 1)
+      showToast('success', 'Đã cập nhật sản phẩm thành công.')
     } catch (requestError) {
-      setEditError(requestError.message || 'Không thể cập nhật sản phẩm. Vui lòng thử lại.')
+      const message = requestError.message || 'Không thể cập nhật sản phẩm. Vui lòng thử lại.'
+      setEditError(message)
+      showToast('error', message)
     } finally {
       setUpdating(false)
     }
@@ -345,11 +422,13 @@ export default function ProductListPage({ onStatsChange }) {
       })
       setDeleteTarget(null)
       setRefreshKey((value) => value + 1)
+      showToast('success', 'Đã xóa sản phẩm thành công.')
     } catch (requestError) {
-      setDeleteError(
+      const message =
         requestError.message ||
         'Không thể xóa sản phẩm. Nếu sản phẩm đã có phiếu kho hoặc dữ liệu liên quan, hãy đổi trạng thái thay vì xóa.'
-      )
+      setDeleteError(message)
+      showToast('error', message)
     } finally {
       setDeleting(false)
     }
@@ -357,6 +436,18 @@ export default function ProductListPage({ onStatsChange }) {
 
   return (
     <div className="product-list-page">
+      {toast && (
+        <div className={`plp-toast ${toast.type}`} role="status" aria-live="polite">
+          <div className="plp-toast-icon" aria-hidden="true">
+            {toast.type === 'success' ? '✓' : '!'}
+          </div>
+          <p>{toast.message}</p>
+          <button type="button" aria-label="Đóng thông báo" onClick={() => setToast(null)}>
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="plp-filter-bar">
         <label className="plp-filter-item plp-search">
@@ -625,7 +716,7 @@ export default function ProductListPage({ onStatsChange }) {
           onClick={() => setSelectedProduct(null)}
         >
           <section
-            className="plp-modal"
+            className="plp-modal plp-detail-modal"
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
@@ -645,44 +736,88 @@ export default function ProductListPage({ onStatsChange }) {
               </button>
             </div>
 
-            <div className="plp-modal-image">
-              <img src={getProductImage(selectedProduct)} alt={selectedProduct.name} />
+            <div className="plp-detail-layout">
+              <div className="plp-detail-media">
+                <img src={getProductImage(selectedProduct)} alt={selectedProduct.name} />
+              </div>
+
+              <div className="plp-detail-summary">
+                <div className="plp-detail-tags">
+                  <span className={`plp-business-pill ${getBusinessStatus(selectedProduct).className}`}>
+                    {getBusinessStatus(selectedProduct).label}
+                  </span>
+                  <span className={`plp-status-pill ${getStockStatus(selectedProduct).className}`}>
+                    {getStockStatus(selectedProduct).label}
+                  </span>
+                </div>
+
+                <p className="plp-modal-desc">{selectedProduct.description || 'Sản phẩm chưa có mô tả.'}</p>
+
+                <div className="plp-detail-price-row">
+                  <div>
+                    <span>Giá bán</span>
+                    <strong>{formatCurrency(getProductPrice(selectedProduct))}</strong>
+                  </div>
+                  <div>
+                    <span>Giá nhập</span>
+                    <strong>{formatCurrency(selectedProduct.cost_price)}</strong>
+                  </div>
+                </div>
+
+                <button
+                  className="plp-detail-edit"
+                  type="button"
+                  onClick={() => {
+                    setEditError('')
+                    setEditingProduct(selectedProduct)
+                    setSelectedProduct(null)
+                  }}
+                >
+                  Sửa sản phẩm
+                </button>
+              </div>
             </div>
 
-            <p className="plp-modal-desc">{selectedProduct.description || 'Sản phẩm chưa có mô tả.'}</p>
-
-            <div className="plp-modal-grid">
-              <div className="plp-modal-item">
-                <span>Danh mục</span>
-                <strong>{getCategoryName(selectedProduct)}</strong>
-              </div>
-              <div className="plp-modal-item">
-                <span>Giá</span>
-                <strong>{formatCurrency(getProductPrice(selectedProduct))}</strong>
-              </div>
-              <div className="plp-modal-item">
-                <span>Số lượng</span>
-                <strong>{selectedProduct.quantity}</strong>
-              </div>
+            <div className="plp-modal-grid plp-detail-grid">
               <div className="plp-modal-item">
                 <span>SKU</span>
                 <strong>{selectedProduct.sku || `#${selectedProduct.id}`}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Barcode</span>
+                <strong>{selectedProduct.barcode || 'Chưa có'}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Danh mục</span>
+                <strong>{getCategoryName(selectedProduct)}</strong>
               </div>
               <div className="plp-modal-item">
                 <span>Nhà cung cấp</span>
                 <strong>{getSupplierName(selectedProduct)}</strong>
               </div>
               <div className="plp-modal-item">
+                <span>Số lượng</span>
+                <strong>{selectedProduct.quantity ?? 0}</strong>
+              </div>
+              <div className="plp-modal-item">
                 <span>Tồn tối thiểu</span>
                 <strong>{selectedProduct.minimum_stock ?? 0}</strong>
               </div>
               <div className="plp-modal-item">
-                <span>Kinh doanh</span>
-                <strong>{getBusinessStatus(selectedProduct).label}</strong>
+                <span>Đơn vị tính</span>
+                <strong>{getUnitLabel(selectedProduct.unit)}</strong>
               </div>
               <div className="plp-modal-item">
-                <span>Tồn kho</span>
-                <strong>{getStockStatus(selectedProduct).label}</strong>
+                <span>Mã sản phẩm</span>
+                <strong>#{selectedProduct.id}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Ngày tạo</span>
+                <strong>{formatDateTime(selectedProduct.created_at)}</strong>
+              </div>
+              <div className="plp-modal-item">
+                <span>Cập nhật</span>
+                <strong>{formatDateTime(selectedProduct.updated_at)}</strong>
               </div>
             </div>
           </section>

@@ -19,3 +19,7 @@ export const deleteProduct = (id) => {
 export const getCategories = () => {
   return api.get('/categories/')
 }
+
+export const getSuppliers = () => {
+  return api.get('/suppliers/')
+}

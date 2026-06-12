@@ -2,7 +2,7 @@ import django_filters
 from django.db import models
 from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, parsers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -49,6 +49,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category", "supplier").all().order_by("id")
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,

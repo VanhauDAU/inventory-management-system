@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import ProductListPage from './pages/products/ProductListPage'
+import CategoryPage from './pages/categories/CategoryPage'
 import PlaceholderPage from './components/common/PlaceholderPage'
 import LoginPage from './pages/LoginPage'
 
@@ -45,7 +46,7 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
       return <ProductListPage onStatsChange={onStatsChange} />
 
     case 'product-categories':
-      return <PlaceholderPage title="Danh mục sản phẩm" description="Quản lý danh mục: xem, thêm, sửa, xóa danh mục." icon="🗂️" />
+      return <CategoryPage />
 
     case 'product-suppliers':
       return <PlaceholderPage title="Nhà phân phối" description="Danh sách và thông tin các nhà phân phối sản phẩm." icon="🏭" />

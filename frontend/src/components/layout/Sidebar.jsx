@@ -211,8 +211,9 @@ function handleNavigate(pageKey) {
         <div className="sidebar-user">
           <div className="sidebar-user-avatar">LN</div>
           <div className="sidebar-user-info">
-            <strong>Lê Đình Nguyên</strong>
-            <span>Frontend Developer</span>
+            {/* Hiển thị dữ liệu từ db người dùng */}
+            <strong>{}</strong>
+            <span>{}</span>
           </div>
         </div>
       </div>
