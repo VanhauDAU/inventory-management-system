@@ -46,6 +46,17 @@ const transactionLabels = {
   adjustment: 'Điều chỉnh',
 }
 
+const priorityLabels = {
+  high: 'Cao',
+  medium: 'Trung bình',
+  low: 'Thấp',
+}
+
+const formatDays = (value) => {
+  if (value === null || value === undefined) return 'Chưa đủ dữ liệu'
+  return `${formatNumber(value)} ngày`
+}
+
 function Icon({ name }) {
   const common = {
     width: 20,
@@ -103,35 +114,51 @@ export default function InventoryOverviewPage({ onNavigate }) {
   const [products, setProducts] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [transactions, setTransactions] = useState([])
+  const [aiAdvice, setAiAdvice] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [aiLoading, setAiLoading] = useState(true)
   const [error, setError] = useState('')
+  const [aiError, setAiError] = useState('')
 
   useEffect(() => {
     const controller = new AbortController()
 
     async function loadReport() {
       setLoading(true)
+      setAiLoading(true)
       setError('')
+      setAiError('')
 
       try {
-        const [summaryResponse, productList, warehouseList, transactionList] = await Promise.all([
+        const [summaryResponse, productList, warehouseList, transactionList, adviceResponse] = await Promise.all([
           api.get('/reports/inventory/summary/', { signal: controller.signal }),
           fetchAllPages('/products/?ordering=name', controller.signal),
           fetchAllPages('/warehouses/?ordering=name', controller.signal),
           fetchAllPages('/stock-transactions/?ordering=-created_at', controller.signal),
+          api.get('/ai/inventory-advice/', { signal: controller.signal }).catch((err) => ({ error: err })),
         ])
 
         setSummary(summaryResponse.data)
         setProducts(productList)
         setWarehouses(warehouseList)
         setTransactions(transactionList)
+        if (adviceResponse.error) {
+          const detail = adviceResponse.error.response?.data?.detail
+          setAiError(detail || 'Không thể tải gợi ý AI nhập hàng.')
+          setAiAdvice(null)
+        } else {
+          setAiAdvice(adviceResponse.data)
+        }
       } catch (err) {
         if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
           const detail = err.response?.data?.detail
           setError(detail || 'Không thể tải tổng quan tồn kho. Vui lòng kiểm tra quyền truy cập hoặc kết nối API.')
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+          setAiLoading(false)
+        }
       }
     }
 
@@ -235,6 +262,67 @@ export default function InventoryOverviewPage({ onNavigate }) {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="ir-panel ir-ai-panel">
+        <div className="ir-panel-head">
+          <div>
+            <span className="ir-eyebrow">AI advisor</span>
+            <h3>Gợi ý nhập hàng</h3>
+          </div>
+          <button type="button" onClick={() => onNavigate?.('import-orders')}>Lập phiếu nhập</button>
+        </div>
+
+        {aiLoading ? (
+          <div className="ir-state small">Đang phân tích tồn kho...</div>
+        ) : aiError ? (
+          <div className="ir-notice error">{aiError}</div>
+        ) : !aiAdvice?.recommendations?.length ? (
+          <div className="ir-ai-empty">
+            <span><Icon name="alert" /></span>
+            <strong>Chưa cần nhập thêm</strong>
+            <p>{aiAdvice?.ai_summary || 'Tồn kho hiện tại chưa phát sinh cảnh báo theo ngưỡng và tốc độ xuất gần đây.'}</p>
+          </div>
+        ) : (
+          <>
+            <div className="ir-ai-summary">
+              <p>{aiAdvice.ai_summary}</p>
+              <div>
+                {aiAdvice.meta?.mode === 'openai' && <span>OpenAI · {aiAdvice.meta?.model}</span>}
+                <span>{formatNumber(aiAdvice.summary?.total_alerts)} cảnh báo</span>
+                <span>{formatNumber(aiAdvice.summary?.estimated_restock_items)} sản phẩm đề xuất nhập</span>
+                <span>{formatNumber(aiAdvice.summary?.high_priority)} ưu tiên cao</span>
+              </div>
+            </div>
+
+            <div className="ir-ai-list">
+              {aiAdvice.recommendations.slice(0, 5).map((item) => (
+                <article className="ir-ai-row" key={item.product_id}>
+                  <div className="ir-ai-product">
+                    <span className={`ir-priority ${item.priority}`}>{priorityLabels[item.priority] || item.priority}</span>
+                    <div>
+                      <strong>{item.product_name}</strong>
+                      <small>{item.sku} · {item.category_name || 'Chưa phân loại'}</small>
+                    </div>
+                  </div>
+                  <div className="ir-ai-metrics">
+                    <span><b>{formatNumber(item.current_quantity)}</b><small>Hiện có</small></span>
+                    <span><b>{formatNumber(item.minimum_stock)}</b><small>Tối thiểu</small></span>
+                    <span><b>{formatNumber(item.suggested_quantity)}</b><small>Đề xuất nhập</small></span>
+                    <span><b>{formatDays(item.days_remaining)}</b><small>Dự kiến còn</small></span>
+                  </div>
+                  <p>{item.ai_reason || item.reason}</p>
+                  {(item.risk || item.suggested_action) && (
+                    <div className="ir-ai-extra">
+                      {item.risk && <span><b>Rủi ro:</b> {item.risk}</span>}
+                      {item.suggested_action && <span><b>Hành động:</b> {item.suggested_action}</span>}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="ir-main-grid">

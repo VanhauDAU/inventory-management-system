@@ -44,7 +44,6 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
     description: '',
     cost_price: '',
     selling_price: '',
-    quantity: '',
     minimum_stock: '',
     unit: 'piece',
     status: 'active',
@@ -69,7 +68,6 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
         description: initialData.description || '',
         cost_price: formatMoneyFromApi(initialData.cost_price),
         selling_price: formatMoneyFromApi(initialData.selling_price ?? initialData.price),
-        quantity: initialData.quantity || '',
         minimum_stock: initialData.minimum_stock || '',
         unit: initialData.unit || 'piece',
         status: initialData.status || 'active',
@@ -114,7 +112,6 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
     const barcode = form.barcode.trim()
     const costPrice = parseMoneyInput(form.cost_price)
     const sellingPrice = parseMoneyInput(form.selling_price)
-    const quantity = Number(form.quantity)
     const minimumStock = Number(form.minimum_stock || 0)
 
     if (barcode && !/^[A-Za-z0-9-]{6,100}$/.test(barcode)) {
@@ -155,18 +152,8 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       newErrors.selling_price = 'Giá bán không được nhỏ hơn giá nhập'
     }
 
-    if (form.quantity === '' || form.quantity === null) {
-      newErrors.quantity = 'Vui lòng nhập số lượng'
-    } else if (!Number.isInteger(quantity) || quantity < 0) {
-      newErrors.quantity = 'Số lượng phải là số nguyên không âm'
-    }
-
     if (form.minimum_stock !== '' && (!Number.isInteger(minimumStock) || minimumStock < 0)) {
       newErrors.minimum_stock = 'Tồn tối thiểu phải là số nguyên không âm'
-    }
-
-    if (!newErrors.quantity && !newErrors.minimum_stock && minimumStock > quantity) {
-      newErrors.minimum_stock = 'Tồn tối thiểu không được lớn hơn số lượng hiện có'
     }
 
     if (!form.unit.trim()) newErrors.unit = 'Vui lòng chọn hoặc nhập đơn vị tính'
@@ -218,7 +205,6 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       cost_price: form.cost_price === '' ? 0 : parseMoneyInput(form.cost_price),
       selling_price: parseMoneyInput(form.selling_price),
       price: parseMoneyInput(form.selling_price),
-      quantity: Number(form.quantity),
       minimum_stock: form.minimum_stock === '' ? 0 : Number(form.minimum_stock),
       unit: form.unit.trim(),
       status: form.status,
@@ -320,7 +306,7 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
           </div>
 
           <div className="form-section">
-            <h3>Giá và tồn kho</h3>
+            <h3>Giá và ngưỡng tồn</h3>
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label">Giá nhập (VNĐ)</label>
@@ -355,23 +341,6 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">
-                  Số lượng <span className="required">*</span>
-                </label>
-                <input
-                  name="quantity"
-                  type="number"
-                  min="0"
-                  step="1"
-                  className={`form-input ${errors.quantity ? 'input-error' : ''}`}
-                  placeholder="0"
-                  value={form.quantity}
-                  onChange={handleChange}
-                />
-                {errors.quantity && <p className="error-msg">{errors.quantity}</p>}
-              </div>
-
-              <div className="form-group">
                 <label className="form-label">Tồn tối thiểu</label>
                 <input
                   name="minimum_stock"
@@ -383,6 +352,7 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
                   value={form.minimum_stock}
                   onChange={handleChange}
                 />
+                <small className="field-help">Tổng tồn được tính tự động từ nhập, xuất và điều chỉnh kho.</small>
                 {errors.minimum_stock && <p className="error-msg">{errors.minimum_stock}</p>}
               </div>
             </div>

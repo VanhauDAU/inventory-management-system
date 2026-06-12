@@ -10,7 +10,7 @@ const orderingOptions = [
   { value: 'name', label: 'Tên A-Z' },
   { value: 'price', label: 'Giá tăng dần' },
   { value: '-price', label: 'Giá giảm dần' },
-  { value: '-quantity', label: 'Tồn kho cao' },
+  { value: '-quantity', label: 'Tổng tồn cao' },
 ]
 
 const formatCurrency = (value) =>
@@ -541,7 +541,7 @@ export default function ProductListPage({ onStatsChange }) {
         </label>
 
         <label className="plp-filter-item">
-          <span>SL từ</span>
+          <span>Tổng tồn từ</span>
           <input
             type="number"
             min="0"
@@ -552,7 +552,7 @@ export default function ProductListPage({ onStatsChange }) {
         </label>
 
         <label className="plp-filter-item">
-          <span>SL đến</span>
+          <span>Tổng tồn đến</span>
           <input
             type="number"
             min="0"
@@ -606,7 +606,7 @@ export default function ProductListPage({ onStatsChange }) {
                   <th>Danh mục</th>
                   <th>Nhà cung cấp</th>
                   <th>Giá</th>
-                  <th>Số lượng</th>
+                  <th>Tổng tồn</th>
                   <th>Kinh doanh</th>
                   <th>Trạng thái</th>
                   <th>Thao tác</th>
@@ -796,7 +796,7 @@ export default function ProductListPage({ onStatsChange }) {
                 <strong>{getSupplierName(selectedProduct)}</strong>
               </div>
               <div className="plp-modal-item">
-                <span>Số lượng</span>
+                <span>Tổng tồn</span>
                 <strong>{selectedProduct.quantity ?? 0}</strong>
               </div>
               <div className="plp-modal-item">
