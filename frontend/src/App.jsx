@@ -70,7 +70,7 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
       return <StockTransactionPage transactionType="export" />
 
     case 'adjustment-orders':
-      return <PlaceholderPage title="Phiếu điều chỉnh kho" description="Điều chỉnh số lượng tồn kho khi kiểm kê phát sinh chênh lệch." icon="🔧" />
+      return <StockTransactionPage transactionType="adjustment" />
 
     case 'transaction-history':
       return <StockTransactionPage transactionType="all" />

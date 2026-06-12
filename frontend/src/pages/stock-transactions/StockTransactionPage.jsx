@@ -20,6 +20,14 @@ const transactionMeta = {
     successMessage: 'Đã tạo phiếu xuất kho.',
     emptyLabel: 'Chưa có phiếu xuất kho.',
   },
+  adjustment: {
+    eyebrow: 'Điều chỉnh kho',
+    title: 'Phiếu điều chỉnh kho',
+    description: 'Ghi nhận số lượng kiểm kê thực tế và cập nhật lại tồn kho theo từng sản phẩm.',
+    submitLabel: 'Tạo phiếu điều chỉnh',
+    successMessage: 'Đã tạo phiếu điều chỉnh kho.',
+    emptyLabel: 'Chưa có phiếu điều chỉnh kho.',
+  },
   all: {
     eyebrow: 'Giao dịch kho',
     title: 'Lịch sử giao dịch kho',
@@ -147,7 +155,12 @@ async function fetchAllPages(path, signal) {
 }
 
 function createTransactionCode(type) {
-  const prefix = type === 'import' ? 'NK' : 'XK'
+  const prefixMap = {
+    import: 'NK',
+    export: 'XK',
+    adjustment: 'DC',
+  }
+  const prefix = prefixMap[type] || 'PK'
   const now = new Date()
   const datePart = [
     now.getFullYear(),
@@ -166,7 +179,8 @@ function createTransactionCode(type) {
 
 export default function StockTransactionPage({ transactionType = 'all' }) {
   const meta = transactionMeta[transactionType] || transactionMeta.all
-  const isFormMode = transactionType === 'import' || transactionType === 'export'
+  const isFormMode = transactionType === 'import' || transactionType === 'export' || transactionType === 'adjustment'
+  const isAdjustment = transactionType === 'adjustment'
   const [warehouses, setWarehouses] = useState([])
   const [products, setProducts] = useState([])
   const [transactions, setTransactions] = useState([])
@@ -185,6 +199,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
   const [refreshKey, setRefreshKey] = useState(0)
   const [historySearch, setHistorySearch] = useState('')
   const [productSearch, setProductSearch] = useState('')
+  const [selectedTransaction, setSelectedTransaction] = useState(null)
 
   function showToast(type, message) {
     setToast({ id: Date.now(), type, message })
@@ -345,6 +360,20 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
     })
   }, [historySearch, transactions])
 
+  const quantityLabel = isAdjustment ? 'SL thực tế' : 'Số lượng'
+  const selectedPanelTitle = isAdjustment ? 'Kiểm kê hiện tại' : 'Phiếu hiện tại'
+  const selectedEmptyText = isAdjustment
+    ? 'Chọn sản phẩm cần điều chỉnh tồn kho từ danh sách bên trái.'
+    : 'Chọn sản phẩm từ danh sách bên trái để bắt đầu tạo phiếu.'
+  const pickerHelpText = isAdjustment
+    ? 'Bấm sản phẩm cần kiểm kê; số lượng mặc định là tồn hiện tại trong kho.'
+    : 'Bấm sản phẩm để thêm vào phiếu; bấm lại để tăng số lượng.'
+  const defaultReasonPlaceholder = {
+    import: 'Nhập hàng từ nhà cung cấp',
+    export: 'Xuất bán / xuất dùng',
+    adjustment: 'Kiểm kê kho / điều chỉnh chênh lệch',
+  }[transactionType] || 'Lý do lập phiếu'
+
   function resetForm() {
     setTransactionCode(createTransactionCode(transactionType))
     setReason('')
@@ -404,6 +433,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
       const nextLine = {
         ...initialLine,
         product: productId,
+        quantity: isAdjustment ? String(Math.max(availableQuantity, 1)) : initialLine.quantity,
         unit_price: String(getProductPrice(product)),
       }
       return [...current, nextLine]
@@ -435,7 +465,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
 
       const quantity = Number(line.quantity)
       const unitPrice = Number(line.unit_price)
-      if (!Number.isInteger(quantity) || quantity <= 0) return 'Số lượng phải là số nguyên lớn hơn 0.'
+      if (!Number.isInteger(quantity) || quantity <= 0) return `${quantityLabel} phải là số nguyên lớn hơn 0.`
       if (Number.isNaN(unitPrice) || unitPrice < 0) return 'Đơn giá phải lớn hơn hoặc bằng 0.'
 
       if (transactionType === 'export') {
@@ -492,7 +522,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
   }
 
   return (
-    <div className="stock-page">
+    <div className={`stock-page${isFormMode ? ' has-fixed-actions' : ''}`}>
       {toast && (
         <div className={`stock-toast ${toast.type}`} role="status" aria-live="polite">
           <div className="stock-toast-icon" aria-hidden="true">{toast.type === 'success' ? '✓' : '!'}</div>
@@ -543,7 +573,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
 
             <label className="stock-field">
               <span>Lý do</span>
-              <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={transactionType === 'import' ? 'Nhập hàng từ nhà cung cấp' : 'Xuất bán / xuất dùng'} maxLength={255} />
+              <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={defaultReasonPlaceholder} maxLength={255} />
             </label>
 
             <label className="stock-field">
@@ -556,7 +586,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
             <div className="stock-lines-head">
               <div>
                 <span>Chọn sản phẩm</span>
-                <small>Bấm sản phẩm để thêm vào phiếu; bấm lại để tăng số lượng.</small>
+                <small>{pickerHelpText}</small>
               </div>
               <div className="stock-lines-summary">
                 <strong>{lines.length}</strong>
@@ -601,7 +631,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
                         </span>
                         <span className="stock-product-meta">
                           <strong>{formatCurrency(getProductPrice(product))}</strong>
-                          <small>{transactionType === 'export' ? `Còn ${availableQuantity}` : `Tồn ${product.quantity || 0}`}</small>
+                          <small>{transactionType === 'export' || isAdjustment ? `Tồn kho này ${availableQuantity}` : `Tồn tổng ${product.quantity || 0}`}</small>
                         </span>
                         {isSelected && <span className="stock-selected-badge">x{selectedQuantity}</span>}
                       </button>
@@ -612,13 +642,13 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
 
               <div className="stock-selected-panel">
                 <div className="stock-selected-head">
-                  <span>Phiếu hiện tại</span>
+                  <span>{selectedPanelTitle}</span>
                   <strong>{formatCurrency(totals)}</strong>
                 </div>
 
                 {lines.length === 0 ? (
                   <div className="stock-selected-empty">
-                    Chọn sản phẩm từ danh sách bên trái để bắt đầu tạo phiếu.
+                    {selectedEmptyText}
                   </div>
                 ) : (
                   <div className="stock-selected-scroll">
@@ -634,12 +664,14 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
                             <div>
                               <strong>{product?.name || `Sản phẩm #${line.product}`}</strong>
                               <span>{product?.sku || `#${line.product}`} · {product?.category_detail?.name || 'Chưa có danh mục'}</span>
-                              {transactionType === 'export' && <small>Còn trong kho: {availableQuantity}</small>}
+                              {(transactionType === 'export' || isAdjustment) && (
+                                <small>{isAdjustment ? 'Tồn hiện tại' : 'Còn trong kho'}: {availableQuantity}</small>
+                              )}
                             </div>
                           </div>
 
                           <label className="stock-field">
-                            <span>Số lượng</span>
+                            <span>{quantityLabel}</span>
                             <div className="stock-stepper">
                               <button type="button" onClick={() => adjustLineQuantity(index, -1)} aria-label="Giảm số lượng">−</button>
                               <input type="number" min="1" step="1" value={line.quantity} onChange={(event) => updateLine(index, 'quantity', event.target.value)} />
@@ -712,6 +744,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
                   <th>Giá trị</th>
                   <th>Người tạo</th>
                   <th>Thời gian</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -724,7 +757,11 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
 
                   return (
                     <tr key={transaction.id}>
-                      <td><span className="stock-code">{transaction.transaction_code}</span></td>
+                      <td>
+                        <button type="button" className="stock-code" onClick={() => setSelectedTransaction(transaction)}>
+                          {transaction.transaction_code}
+                        </button>
+                      </td>
                       <td>
                         <span className={`stock-type ${transaction.transaction_type}`}>
                           {typeLabelMap[transaction.transaction_type] || transaction.transaction_type}
@@ -736,6 +773,11 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
                       <td><strong>{formatCurrency(amount)}</strong></td>
                       <td>{transaction.created_by_username || 'Hệ thống'}</td>
                       <td>{formatDateTime(transaction.created_at)}</td>
+                      <td>
+                        <button type="button" className="stock-detail-btn" onClick={() => setSelectedTransaction(transaction)}>
+                          Chi tiết
+                        </button>
+                      </td>
                     </tr>
                   )
                 })}
@@ -744,6 +786,102 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
           </div>
         )}
       </section>
+
+      {selectedTransaction && (
+        <div className="stock-modal-backdrop" role="presentation" onClick={() => setSelectedTransaction(null)}>
+          <section className="stock-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <div className="stock-modal-header">
+              <div>
+                <span className="stock-eyebrow">Chi tiết phiếu kho</span>
+                <h3>{selectedTransaction.transaction_code}</h3>
+              </div>
+              <button type="button" aria-label="Đóng" onClick={() => setSelectedTransaction(null)}>×</button>
+            </div>
+
+            <div className="stock-detail-summary">
+              <article>
+                <span>Loại phiếu</span>
+                <strong>{typeLabelMap[selectedTransaction.transaction_type] || selectedTransaction.transaction_type}</strong>
+              </article>
+              <article>
+                <span>Kho</span>
+                <strong>{selectedTransaction.warehouse_detail?.name || `Kho #${selectedTransaction.warehouse}`}</strong>
+              </article>
+              <article>
+                <span>Người tạo</span>
+                <strong>{selectedTransaction.created_by_username || 'Hệ thống'}</strong>
+              </article>
+              <article>
+                <span>Thời gian</span>
+                <strong>{formatDateTime(selectedTransaction.created_at)}</strong>
+              </article>
+            </div>
+
+            <div className="stock-detail-notes">
+              <div>
+                <span>Lý do</span>
+                <p>{selectedTransaction.reason || 'Chưa có lý do'}</p>
+              </div>
+              <div>
+                <span>Ghi chú</span>
+                <p>{selectedTransaction.note || 'Chưa có ghi chú'}</p>
+              </div>
+            </div>
+
+            <div className="stock-detail-table-wrap">
+              <table className="stock-detail-table">
+                <thead>
+                  <tr>
+                    <th>Sản phẩm</th>
+                    <th>SKU</th>
+                    <th>Số lượng</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                    <th>Ghi chú</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedTransaction.items || []).map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <div className="stock-detail-product">
+                          <img src={getProductImage(item.product_detail)} alt={item.product_detail?.name || 'Sản phẩm'} />
+                          <div>
+                            <strong>{item.product_detail?.name || `Sản phẩm #${item.product}`}</strong>
+                            <span>{item.product_detail?.category_detail?.name || 'Chưa có danh mục'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{item.product_detail?.sku || `#${item.product}`}</td>
+                      <td><strong>{item.quantity}</strong></td>
+                      <td>{formatCurrency(item.unit_price)}</td>
+                      <td><strong>{formatCurrency(item.total_amount)}</strong></td>
+                      <td>{item.note || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colSpan="2">Tổng cộng</td>
+                    <td>
+                      <strong>
+                        {(selectedTransaction.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)}
+                      </strong>
+                    </td>
+                    <td />
+                    <td>
+                      <strong>
+                        {formatCurrency((selectedTransaction.items || []).reduce((sum, item) => sum + Number(item.total_amount || 0), 0))}
+                      </strong>
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
