@@ -30,11 +30,13 @@ from rest_framework.response import Response
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from accounts.views import current_user
 from categories.views import CategoryViewSet
 from inventory.views import (
     StockTransactionItemViewSet,
     StockTransactionViewSet,
     WarehouseViewSet,
+    WarehouseStockViewSet,
 )
 from products.views import ProductViewSet
 from suppliers.views import SupplierViewSet
@@ -44,6 +46,7 @@ router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"suppliers", SupplierViewSet, basename="supplier")
 router.register(r"warehouses", WarehouseViewSet, basename="warehouse")
+router.register(r"warehouse-stocks", WarehouseStockViewSet, basename="warehouse-stock")
 router.register(r"stock-transactions", StockTransactionViewSet, basename="stock-transaction")
 router.register(
     r"stock-transaction-items",
@@ -71,6 +74,7 @@ urlpatterns = [
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/me/", current_user, name="current_user"),
     path("api/reports/", include("reports.urls")),
     path("api/", include(router.urls)),
 ]

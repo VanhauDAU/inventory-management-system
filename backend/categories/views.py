@@ -1,4 +1,5 @@
 from django.db.models import ProtectedError
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,6 +8,45 @@ from .models import Category
 from .serializers import CategorySerializer
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Categories"],
+        summary="List product categories",
+        description="Return product categories with parent/category tree fields and product counts.",
+    ),
+    retrieve=extend_schema(
+        tags=["Categories"],
+        summary="Retrieve product category",
+        description="Return one category with parent, child count, product count, and status.",
+    ),
+    create=extend_schema(
+        tags=["Categories"],
+        summary="Create product category",
+        description="Create a category. Parent can be null for a root category.",
+    ),
+    update=extend_schema(
+        tags=["Categories"],
+        summary="Replace product category",
+        description="Replace all editable category fields.",
+    ),
+    partial_update=extend_schema(
+        tags=["Categories"],
+        summary="Update product category",
+        description="Partially update category name, description, parent, or status.",
+    ),
+    destroy=extend_schema(
+        tags=["Categories"],
+        summary="Delete product category",
+        description=(
+            "Delete a category only when it has no products. "
+            "If products still reference the category, the API returns HTTP 409."
+        ),
+        responses={
+            204: OpenApiResponse(description="Category deleted."),
+            409: OpenApiResponse(description="Category cannot be deleted because it is in use."),
+        },
+    ),
+)
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by("id")
     serializer_class = CategorySerializer

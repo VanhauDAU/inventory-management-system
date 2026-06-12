@@ -55,6 +55,7 @@ function LoginPage({ onLogin }) {
 
       localStorage.setItem('access_token', data.access)
       localStorage.setItem('refresh_token', data.refresh)
+      localStorage.setItem('current_username', form.username.trim())
       onLogin?.()
     } catch (err) {
       setApiError(err.message || 'Đăng nhập thất bại. Vui lòng thử lại.')

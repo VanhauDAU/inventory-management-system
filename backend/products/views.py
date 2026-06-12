@@ -2,6 +2,7 @@ import django_filters
 from django.db import models
 from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, parsers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -45,6 +46,51 @@ class ProductFilter(django_filters.FilterSet):
         return queryset.filter(quantity__lte=models.F("minimum_stock"))
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Products"],
+        summary="List products",
+        description=(
+            "Return products with category, supplier, stock, price, status, and image fields. "
+            "Supports search, filters, ordering, and pagination."
+        ),
+    ),
+    retrieve=extend_schema(
+        tags=["Products"],
+        summary="Retrieve product",
+        description="Return one product with category and supplier details.",
+    ),
+    create=extend_schema(
+        tags=["Products"],
+        summary="Create product",
+        description=(
+            "Create a product. Supports multipart/form-data for image upload. "
+            "SKU is generated automatically when omitted."
+        ),
+    ),
+    update=extend_schema(
+        tags=["Products"],
+        summary="Replace product",
+        description="Replace all editable product fields. Supports multipart/form-data for image upload.",
+    ),
+    partial_update=extend_schema(
+        tags=["Products"],
+        summary="Update product",
+        description="Partially update product fields. Supports multipart/form-data for image upload.",
+    ),
+    destroy=extend_schema(
+        tags=["Products"],
+        summary="Delete product",
+        description=(
+            "Delete a product only when it has no protected business references. "
+            "Products used in stock transaction items return HTTP 409."
+        ),
+        responses={
+            204: OpenApiResponse(description="Product deleted."),
+            409: OpenApiResponse(description="Product cannot be deleted because it is in use."),
+        },
+    ),
+)
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category", "supplier").all().order_by("id")
     serializer_class = ProductSerializer
@@ -88,6 +134,12 @@ class ProductViewSet(viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @extend_schema(
+        tags=["Products"],
+        summary="List product stock history",
+        description="Return stock transaction item history for the selected product.",
+        responses={200: StockTransactionItemSerializer(many=True)},
+    )
     @action(detail=True, methods=["get"], url_path="stock-history")
     def stock_history(self, request, pk=None):
         product = self.get_object()

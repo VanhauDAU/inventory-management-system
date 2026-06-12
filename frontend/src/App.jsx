@@ -3,6 +3,9 @@ import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import ProductListPage from './pages/products/ProductListPage'
 import CategoryPage from './pages/categories/CategoryPage'
+import SupplierPage from './pages/suppliers/SupplierPage'
+import WarehousePage from './pages/warehouses/WarehousePage'
+import StockTransactionPage from './pages/stock-transactions/StockTransactionPage'
 import PlaceholderPage from './components/common/PlaceholderPage'
 import LoginPage from './pages/LoginPage'
 
@@ -49,10 +52,10 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
       return <CategoryPage />
 
     case 'product-suppliers':
-      return <PlaceholderPage title="Nhà phân phối" description="Danh sách và thông tin các nhà phân phối sản phẩm." icon="🏭" />
+      return <SupplierPage />
 
     case 'warehouse-list':
-      return <PlaceholderPage title="Danh sách kho" description="Quản lý các kho hàng: vị trí, sức chứa, trạng thái." icon="🏬" />
+      return <WarehousePage />
 
     case 'warehouse-by-product':
       return <PlaceholderPage title="Tồn kho theo sản phẩm" description="Xem số lượng tồn kho của từng sản phẩm trên tất cả kho." icon="📦" />
@@ -61,16 +64,16 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout }) {
       return <PlaceholderPage title="Tồn kho theo kho" description="Xem tổng hợp hàng hóa đang có tại từng kho." icon="📍" />
 
     case 'import-orders':
-      return <PlaceholderPage title="Phiếu nhập kho" description="Tạo và quản lý các phiếu nhập hàng vào kho." icon="📥" />
+      return <StockTransactionPage transactionType="import" />
 
     case 'export-orders':
-      return <PlaceholderPage title="Phiếu xuất kho" description="Tạo và quản lý các phiếu xuất hàng ra khỏi kho." icon="📤" />
+      return <StockTransactionPage transactionType="export" />
 
     case 'adjustment-orders':
       return <PlaceholderPage title="Phiếu điều chỉnh kho" description="Điều chỉnh số lượng tồn kho khi kiểm kê phát sinh chênh lệch." icon="🔧" />
 
     case 'transaction-history':
-      return <PlaceholderPage title="Lịch sử giao dịch kho" description="Xem toàn bộ lịch sử nhập, xuất, điều chỉnh theo thời gian." icon="📋" />
+      return <StockTransactionPage transactionType="all" />
 
     case 'report-overview':
       return <PlaceholderPage title="Tổng quan tồn kho" description="Báo cáo tổng hợp về tình hình tồn kho hiện tại." icon="📊" />
@@ -122,6 +125,9 @@ export default function App() {
     localStorage.removeItem('access_token')
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refresh_token')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('current_user')
+    localStorage.removeItem('current_username')
     setIsLoggedIn(false)
     setActivePage('home')
     setStats(null)

@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './Sidebar.css'
+
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 // Cấu trúc menu nhóm theo nghiệp vụ
 const menuGroups = [
@@ -99,7 +101,80 @@ const menuGroups = [
   },
 ]
 
-export default function Sidebar({ activePage, onNavigate }) {
+async function refreshAccessToken(signal) {
+  const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
+  if (!refreshToken) return null
+
+  const response = await fetch(`${apiUrl}/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh: refreshToken }),
+    signal,
+  })
+
+  if (!response.ok) return null
+
+  const data = await response.json()
+  if (!data.access) return null
+
+  localStorage.setItem('access_token', data.access)
+  localStorage.setItem('accessToken', data.access)
+  return data.access
+}
+
+async function fetchCurrentUser(signal) {
+  let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
+  if (!token) throw new Error('Missing access token')
+
+  const request = (accessToken) => fetch(`${apiUrl}/me/`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    signal,
+  })
+
+  let response = await request(token)
+  if (response.status === 401) {
+    const newToken = await refreshAccessToken(signal)
+    if (!newToken) throw new Error('Session expired')
+    response = await request(newToken)
+  }
+
+  if (!response.ok) throw new Error(`Cannot load user: ${response.status}`)
+  return response.json()
+}
+
+function getUserInitials(user) {
+  const name = user?.full_name || user?.username || ''
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length >= 2) return `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
+  return name.slice(0, 2).toUpperCase() || 'U'
+}
+
+function getUserRole(user) {
+  if (!user) return 'Đang tải...'
+  if (user.is_superuser) return 'Quản trị hệ thống'
+  if (user.is_staff) return 'Nhân viên quản trị'
+  if (user.groups?.length) return user.groups.join(', ')
+  return user.email || 'Người dùng'
+}
+
+function getStoredUser() {
+  const cachedUser = localStorage.getItem('current_user')
+  if (cachedUser) {
+    try {
+      return JSON.parse(cachedUser)
+    } catch {
+      localStorage.removeItem('current_user')
+    }
+  }
+
+  const username = localStorage.getItem('current_username')
+  return username ? { username, full_name: username } : null
+}
+
+export default function Sidebar({ activePage, onNavigate, className = '' }) {
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser())
+  const [userError, setUserError] = useState('')
+
   // Tìm group đang active để mở sẵn
   const findActiveGroup = () => {
     for (const group of menuGroups) {
@@ -114,16 +189,38 @@ export default function Sidebar({ activePage, onNavigate }) {
     return active ? { [active]: true } : {}
   })
 
+  useEffect(() => {
+    const controller = new AbortController()
+
+    fetchCurrentUser(controller.signal)
+      .then((user) => {
+        setCurrentUser(user)
+        localStorage.setItem('current_user', JSON.stringify(user))
+        setUserError('')
+      })
+      .catch((error) => {
+        if (error.name === 'AbortError') return
+        setCurrentUser((current) => current || getStoredUser())
+        setUserError('Chưa đồng bộ từ DB')
+      })
+
+    return () => controller.abort()
+  }, [])
+
   function toggleGroup(key) {
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }))
   }
 
-function handleNavigate(pageKey) {
+  function handleNavigate(pageKey) {
     onNavigate(pageKey)
   }
 
+  const displayName = currentUser?.full_name || currentUser?.username || 'Người dùng'
+  const displayRole = userError || getUserRole(currentUser)
+  const avatarText = getUserInitials(currentUser)
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${className}`.trim()}>
       {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-logo">
@@ -209,11 +306,10 @@ function handleNavigate(pageKey) {
       {/* User card ở cuối sidebar */}
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <div className="sidebar-user-avatar">LN</div>
+          <div className="sidebar-user-avatar">{avatarText}</div>
           <div className="sidebar-user-info">
-            {/* Hiển thị dữ liệu từ db người dùng */}
-            <strong>{}</strong>
-            <span>{}</span>
+            <strong title={displayName}>{displayName}</strong>
+            <span title={displayRole}>{displayRole}</span>
           </div>
         </div>
       </div>

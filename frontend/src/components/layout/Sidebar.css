@@ -220,6 +220,10 @@
   background: #1e293b;
 }
 
+.sidebar-user-info {
+  min-width: 0;
+}
+
 .sidebar-user-avatar {
   display: grid;
   place-items: center;
@@ -239,6 +243,9 @@
   font-weight: 600;
   color: #e2e8f0;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-user-info span {
@@ -246,6 +253,9 @@
   font-size: 0.72rem;
   color: #64748b;
   margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Responsive: mobile */

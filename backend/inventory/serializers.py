@@ -4,7 +4,7 @@ from rest_framework import serializers
 from products.models import Product
 from products.serializers import ProductSerializer
 
-from .models import StockTransaction, StockTransactionItem, Warehouse
+from .models import StockTransaction, StockTransactionItem, Warehouse, WarehouseStock
 
 
 class WarehouseSerializer(serializers.ModelSerializer):
@@ -12,6 +12,8 @@ class WarehouseSerializer(serializers.ModelSerializer):
         source="stock_transactions.count",
         read_only=True,
     )
+    product_kinds_count = serializers.SerializerMethodField()
+    total_quantity = serializers.SerializerMethodField()
 
     class Meta:
         model = Warehouse
@@ -23,10 +25,42 @@ class WarehouseSerializer(serializers.ModelSerializer):
             "manager_name",
             "is_active",
             "stock_transactions_count",
+            "product_kinds_count",
+            "total_quantity",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
+
+    def get_product_kinds_count(self, obj):
+        return obj.stock_items.filter(quantity__gt=0).count()
+
+    def get_total_quantity(self, obj):
+        return sum(stock.quantity for stock in obj.stock_items.all())
+
+    def validate_name(self, value):
+        name = value.strip()
+        if len(name) < 2:
+            raise serializers.ValidationError("Warehouse name must be at least 2 characters.")
+        return name
+
+
+class WarehouseStockSerializer(serializers.ModelSerializer):
+    warehouse_detail = WarehouseSerializer(source="warehouse", read_only=True)
+    product_detail = ProductSerializer(source="product", read_only=True)
+
+    class Meta:
+        model = WarehouseStock
+        fields = [
+            "id",
+            "warehouse",
+            "warehouse_detail",
+            "product",
+            "product_detail",
+            "quantity",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "updated_at"]
 
 
 class StockTransactionItemSerializer(serializers.ModelSerializer):
@@ -92,18 +126,27 @@ class StockTransactionSerializer(serializers.ModelSerializer):
             "transaction_type",
             getattr(self.instance, "transaction_type", None),
         )
+        warehouse = attrs.get(
+            "warehouse",
+            getattr(self.instance, "warehouse", None),
+        )
         items = attrs.get("items", [])
 
         if transaction_type == StockTransaction.TransactionType.EXPORT:
             for item in items:
                 product = item["product"]
                 quantity = item["quantity"]
-                if product.quantity < quantity:
+                warehouse_stock = WarehouseStock.objects.filter(
+                    warehouse=warehouse,
+                    product=product,
+                ).first()
+                available_quantity = warehouse_stock.quantity if warehouse_stock else 0
+                if available_quantity < quantity:
                     raise serializers.ValidationError(
                         {
                             "items": (
-                                f"Product {product.sku} only has "
-                                f"{product.quantity} item(s) in stock."
+                                f"Product {product.sku} only has {available_quantity} "
+                                f"item(s) in warehouse {warehouse.name}."
                             )
                         }
                     )
@@ -139,21 +182,31 @@ class StockTransactionSerializer(serializers.ModelSerializer):
 
     def _apply_stock_change(self, transaction_type, item):
         product = Product.objects.select_for_update().get(pk=item.product_id)
+        warehouse_stock, _ = WarehouseStock.objects.select_for_update().get_or_create(
+            warehouse=item.stock_transaction.warehouse,
+            product=product,
+            defaults={"quantity": 0},
+        )
 
         if transaction_type == StockTransaction.TransactionType.IMPORT:
+            warehouse_stock.quantity += item.quantity
             product.quantity += item.quantity
         elif transaction_type == StockTransaction.TransactionType.EXPORT:
-            if product.quantity < item.quantity:
+            if warehouse_stock.quantity < item.quantity:
                 raise serializers.ValidationError(
                     {
                         "items": (
-                            f"Product {product.sku} only has "
-                            f"{product.quantity} item(s) in stock."
+                            f"Product {product.sku} only has {warehouse_stock.quantity} "
+                            f"item(s) in warehouse {item.stock_transaction.warehouse.name}."
                         )
                     }
                 )
+            warehouse_stock.quantity -= item.quantity
             product.quantity -= item.quantity
         elif transaction_type == StockTransaction.TransactionType.ADJUSTMENT:
-            product.quantity = item.quantity
+            previous_quantity = warehouse_stock.quantity
+            warehouse_stock.quantity = item.quantity
+            product.quantity += item.quantity - previous_quantity
 
+        warehouse_stock.save(update_fields=["quantity", "updated_at"])
         product.save(update_fields=["quantity", "updated_at"])
