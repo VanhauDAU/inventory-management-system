@@ -1,0 +1,84 @@
+/* ===== SUPPLIER PAGE ===== */
+.sup-page { display: flex; flex-direction: column; gap: 1.25rem; }
+
+.sup-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.sup-header h2 { margin: 0 0 4px; font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+.sup-header p { margin: 0; font-size: 0.875rem; color: #64748b; }
+
+.sup-add-btn { display: inline-flex; align-items: center; gap: 0.45rem; height: 40px; padding: 0 1.1rem; border: none; border-radius: 12px; background: #2563eb; color: #fff; font: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+.sup-add-btn:hover { background: #1d4ed8; }
+
+.sup-notice { padding: 0.7rem 1rem; border-radius: 12px; font-size: 0.875rem; }
+.sup-notice.info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+.sup-notice.error { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; }
+
+.sup-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; }
+
+.sup-state { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; padding: 3rem; color: #64748b; font-size: 0.9rem; }
+
+.sup-spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: sup-spin 0.7s linear infinite; }
+@keyframes sup-spin { to { transform: rotate(360deg); } }
+
+.sup-table-wrap { overflow-x: auto; }
+
+.sup-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.sup-table th { padding: 0.75rem 1rem; background: #f8fafc; color: #475569; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+.sup-table td { padding: 0.85rem 1rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; color: #334155; }
+.sup-table tr:last-child td { border-bottom: none; }
+.sup-table tr:hover td { background: #f8fafc; }
+
+.sup-td-num { width: 48px; color: #94a3b8; font-size: 0.82rem; }
+.sup-td-email { font-size: 0.82rem; color: #64748b; }
+.sup-name { font-weight: 600; color: #0f172a; }
+
+.sup-status { display: inline-flex; align-items: center; height: 26px; padding: 0 0.65rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+.sup-status.active { background: #dcfce7; color: #166534; }
+.sup-status.inactive { background: #f1f5f9; color: #64748b; }
+
+.sup-actions { display: flex; gap: 0.5rem; }
+.sup-btn-edit, .sup-btn-delete { display: inline-flex; align-items: center; height: 32px; padding: 0 0.85rem; border-radius: 8px; font: inherit; font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sup-btn-edit { border: 1px solid #2563eb; background: transparent; color: #2563eb; }
+.sup-btn-edit:hover { background: #2563eb; color: #fff; }
+.sup-btn-delete { border: 1px solid #dc2626; background: transparent; color: #dc2626; }
+.sup-btn-delete:hover { background: #dc2626; color: #fff; }
+
+/* Modal */
+.sup-modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 1rem; background: rgba(15, 23, 42, 0.5); }
+.sup-modal { width: min(560px, 100%); background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 25px 60px rgba(15, 23, 42, 0.2); }
+.sup-modal-sm { width: min(400px, 100%); padding: 2rem; text-align: center; }
+
+.sup-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid #f1f5f9; background: #f8fafc; }
+.sup-modal-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; }
+.sup-modal-close { display: grid; place-items: center; width: 34px; height: 34px; border: none; border-radius: 50%; background: #f1f5f9; color: #475569; font-size: 1.3rem; cursor: pointer; transition: background 0.15s; }
+.sup-modal-close:hover { background: #e2e8f0; }
+
+.sup-form { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.9rem; }
+.sup-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+.sup-form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.sup-form-group label { font-size: 0.82rem; font-weight: 700; color: #475569; }
+.required { color: #dc2626; }
+.sup-form-group input, .sup-form-group textarea { padding: 0.6rem 0.85rem; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc; color: #0f172a; font: inherit; font-size: 0.875rem; outline: none; transition: border-color 0.15s; resize: vertical; }
+.sup-form-group input:focus, .sup-form-group textarea:focus { border-color: #2563eb; background: #fff; }
+
+.sup-form-check { display: flex; align-items: center; gap: 0.6rem; }
+.sup-form-check input[type='checkbox'] { width: 16px; height: 16px; cursor: pointer; accent-color: #2563eb; }
+.sup-form-check label { font-size: 0.875rem; font-weight: 600; color: #334155; cursor: pointer; }
+
+.sup-form-error { padding: 0.6rem 0.85rem; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; color: #9a3412; font-size: 0.82rem; }
+
+.sup-form-actions { display: flex; gap: 0.65rem; justify-content: flex-end; padding-top: 0.25rem; }
+.sup-btn-cancel, .sup-btn-save, .sup-btn-delete-confirm { height: 38px; padding: 0 1.25rem; border-radius: 10px; font: inherit; font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.sup-btn-cancel { border: 1px solid #cbd5e1; background: #fff; color: #475569; }
+.sup-btn-cancel:hover { border-color: #2563eb; color: #2563eb; }
+.sup-btn-save { border: none; background: #2563eb; color: #fff; }
+.sup-btn-save:hover { background: #1d4ed8; }
+.sup-btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.sup-btn-delete-confirm { border: none; background: #dc2626; color: #fff; }
+.sup-btn-delete-confirm:hover { background: #b91c1c; }
+
+.sup-del-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.sup-modal-sm h3 { margin: 0 0 0.65rem; font-size: 1.1rem; color: #0f172a; }
+.sup-modal-sm p { margin: 0 0 1.25rem; font-size: 0.9rem; color: #475569; line-height: 1.6; }
+.sup-warn { color: #dc2626; font-size: 0.82rem; }
+
+@media (max-width: 600px) { .sup-form-row { grid-template-columns: 1fr; } }

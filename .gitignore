@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv/
 __pycache__/
 *.pyc
@@ -5,3 +6,8 @@ db.sqlite3
 .env
 .DS_Store
 .vscode/
+=======
+node_modules
+/dist
+.env
+>>>>>>> b7dfeea (update frontend)
