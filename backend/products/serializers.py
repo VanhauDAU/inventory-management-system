@@ -43,7 +43,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["quantity", "created_at", "updated_at"]
         extra_kwargs = {
             "sku": {"required": False},
             "selling_price": {"required": False},

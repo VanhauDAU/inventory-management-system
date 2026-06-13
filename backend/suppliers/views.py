@@ -3,9 +3,9 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.permissions import ViewDjangoModelPermissions
 from products.serializers import ProductSerializer
 from .models import Supplier
 from .serializers import SupplierSerializer
@@ -56,7 +56,7 @@ from .serializers import SupplierSerializer
 class SupplierViewSet(viewsets.ModelViewSet):
     queryset = Supplier.objects.all().order_by("id")
     serializer_class = SupplierSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["is_active"]
     search_fields = ["name", "contact_name", "phone", "email", "address", "tax_code", "note"]

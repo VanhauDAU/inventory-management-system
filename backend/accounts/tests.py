@@ -19,6 +19,12 @@ class AccountAdminApiTests(APITestCase):
             password="password123",
         )
         self.role = Group.objects.create(name="Nhân viên kho")
+        self.staff_user.user_permissions.add(
+            *Permission.objects.filter(
+                content_type__app_label="auth",
+                content_type__model__in=["user", "group", "permission"],
+            )
+        )
 
     def test_regular_user_cannot_manage_users(self):
         self.client.force_authenticate(user=self.normal_user)
@@ -56,6 +62,18 @@ class AccountAdminApiTests(APITestCase):
 
         self.assertEqual(update_response.status_code, status.HTTP_200_OK)
         self.assertEqual(update_response.data["last_name"], "Manager")
+
+    def test_staff_flag_without_permissions_cannot_manage_users(self):
+        staff_without_permissions = User.objects.create_user(
+            username="staff-without-permissions",
+            password="password123",
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_without_permissions)
+
+        response = self.client.get("/api/users/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_staff_user_cannot_assign_staff_or_superuser_flags(self):
         self.client.force_authenticate(user=self.staff_user)

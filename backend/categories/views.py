@@ -1,9 +1,9 @@
 from django.db.models import ProtectedError
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from accounts.permissions import ViewDjangoModelPermissions
 from .models import Category
 from .serializers import CategorySerializer
 
@@ -50,7 +50,7 @@ from .serializers import CategorySerializer
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by("id")
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
 
     def destroy(self, request, *args, **kwargs):
         category = self.get_object()

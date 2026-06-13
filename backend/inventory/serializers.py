@@ -119,6 +119,17 @@ class StockTransactionSerializer(serializers.ModelSerializer):
                 "Each product can only appear once per stock transaction."
             )
 
+        inactive_products = [
+            item["product"].sku
+            for item in items
+            if item["product"].status != Product.Status.ACTIVE
+        ]
+        if inactive_products:
+            raise serializers.ValidationError(
+                "Only active products can be used in stock transactions: "
+                + ", ".join(inactive_products)
+            )
+
         return items
 
     def validate(self, attrs):

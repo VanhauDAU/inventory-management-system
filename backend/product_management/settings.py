@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'inventory',
     'reports',
     'accounts',
+    'ai_advisor',
 ]
 
 REST_FRAMEWORK = {
@@ -198,3 +199,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2")

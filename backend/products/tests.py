@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Permission, User
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -15,6 +15,9 @@ class ProductAPITests(APITestCase):
         self.user = User.objects.create_user(
             username="manager",
             password="managerpass123",
+        )
+        self.user.user_permissions.add(
+            *Permission.objects.filter(content_type__app_label__in=["products", "inventory"])
         )
         self.category = Category.objects.create(name="Electronics")
 
@@ -32,7 +35,6 @@ class ProductAPITests(APITestCase):
                 "name": "Keyboard",
                 "description": "Mechanical keyboard",
                 "price": "49.99",
-                "quantity": 12,
                 "category": self.category.id,
             },
             format="json",
@@ -42,6 +44,7 @@ class ProductAPITests(APITestCase):
         product_id = create_response.data["id"]
         self.assertEqual(create_response.data["category_detail"]["name"], "Electronics")
         self.assertEqual(create_response.data["price"], "49.99")
+        self.assertEqual(create_response.data["quantity"], 0)
         self.assertTrue(create_response.data["sku"].startswith("PRD-"))
 
         list_response = self.client.get("/api/products/?search=Keyboard")
@@ -50,11 +53,12 @@ class ProductAPITests(APITestCase):
 
         update_response = self.client.patch(
             f"/api/products/{product_id}/",
-            {"quantity": 8},
+            {"name": "Keyboard Pro", "quantity": 8},
             format="json",
         )
         self.assertEqual(update_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(update_response.data["quantity"], 8)
+        self.assertEqual(update_response.data["name"], "Keyboard Pro")
+        self.assertEqual(update_response.data["quantity"], 0)
 
         delete_response = self.client.delete(f"/api/products/{product_id}/")
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)

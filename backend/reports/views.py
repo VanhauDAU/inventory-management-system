@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Q, Sum
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -13,8 +13,23 @@ from products.models import Product
 from .serializers import InventorySummarySerializer
 
 
+class HasRequiredModelPermissions(BasePermission):
+    required_permissions = []
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        required_permissions = getattr(view, "required_permissions", self.required_permissions)
+        return request.user.has_perms(required_permissions)
+
+
 class InventorySummaryAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRequiredModelPermissions]
+    required_permissions = [
+        "products.view_product",
+        "inventory.view_warehouse",
+        "inventory.view_stocktransaction",
+    ]
 
     def get(self, request):
         stock_value_expression = ExpressionWrapper(
@@ -58,7 +73,8 @@ class InventorySummaryAPIView(APIView):
 
 class InventoryImportReportAPIView(generics.ListAPIView):
     serializer_class = StockTransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRequiredModelPermissions]
+    required_permissions = ["inventory.view_stocktransaction"]
 
     def get_queryset(self):
         return (
@@ -71,7 +87,8 @@ class InventoryImportReportAPIView(generics.ListAPIView):
 
 class InventoryExportReportAPIView(generics.ListAPIView):
     serializer_class = StockTransactionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasRequiredModelPermissions]
+    required_permissions = ["inventory.view_stocktransaction"]
 
     def get_queryset(self):
         return (

@@ -3,24 +3,14 @@ from django.contrib.auth.models import Group, Permission
 from drf_spectacular.utils import extend_schema, extend_schema_view, inline_serializer
 from rest_framework import filters, serializers, status, viewsets
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from .permissions import ViewDjangoModelPermissions
 from .serializers import PermissionSerializer, RoleSerializer, UserSerializer
 
 
 User = get_user_model()
-
-
-class IsAccountAdmin(BasePermission):
-    message = "Bạn cần quyền quản trị hệ thống để quản lý người dùng và nhóm quyền."
-
-    def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and (request.user.is_staff or request.user.is_superuser)
-        )
 
 
 @extend_schema_view(
@@ -34,7 +24,7 @@ class IsAccountAdmin(BasePermission):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.prefetch_related("groups").all().order_by("id")
     serializer_class = UserSerializer
-    permission_classes = [IsAccountAdmin]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["username", "email", "first_name", "last_name", "groups__name"]
     ordering_fields = [
@@ -79,7 +69,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.prefetch_related("permissions", "permissions__content_type").all().order_by("name")
     serializer_class = RoleSerializer
-    permission_classes = [IsAccountAdmin]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "permissions__name", "permissions__codename"]
     ordering_fields = ["id", "name"]
@@ -105,7 +95,7 @@ class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
         "codename",
     )
     serializer_class = PermissionSerializer
-    permission_classes = [IsAccountAdmin]
+    permission_classes = [ViewDjangoModelPermissions]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["name", "codename", "content_type__app_label", "content_type__model"]
     ordering_fields = ["id", "name", "codename", "content_type__app_label", "content_type__model"]
