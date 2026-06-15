@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../../services/api'
+import { canAccessPage } from '../../utils/permissions'
 import './InventoryOverviewPage.css'
 
 const unwrapList = (data) => Array.isArray(data) ? data : data?.results || []
@@ -109,7 +110,7 @@ function Icon({ name }) {
   return <svg {...common}>{paths[name]}</svg>
 }
 
-export default function InventoryOverviewPage({ onNavigate }) {
+export default function InventoryOverviewPage({ onNavigate, currentUser }) {
   const [summary, setSummary] = useState(null)
   const [products, setProducts] = useState([])
   const [warehouses, setWarehouses] = useState([])
@@ -270,7 +271,9 @@ export default function InventoryOverviewPage({ onNavigate }) {
             <span className="ir-eyebrow">AI advisor</span>
             <h3>Gợi ý nhập hàng</h3>
           </div>
-          <button type="button" onClick={() => onNavigate?.('import-orders')}>Lập phiếu nhập</button>
+          {canAccessPage(currentUser, 'import-orders') && (
+            <button type="button" onClick={() => onNavigate?.('import-orders')}>Lập phiếu nhập</button>
+          )}
         </div>
 
         {aiLoading ? (
@@ -332,7 +335,9 @@ export default function InventoryOverviewPage({ onNavigate }) {
               <span className="ir-eyebrow">Cảnh báo</span>
               <h3>Sản phẩm sắp hết hàng</h3>
             </div>
-            <button type="button" onClick={() => onNavigate?.('report-low-stock')}>Chi tiết</button>
+            {canAccessPage(currentUser, 'report-low-stock') && (
+              <button type="button" onClick={() => onNavigate?.('report-low-stock')}>Chi tiết</button>
+            )}
           </div>
 
           {loading ? (
@@ -421,7 +426,9 @@ export default function InventoryOverviewPage({ onNavigate }) {
               <span className="ir-eyebrow">Gần đây</span>
               <h3>Giao dịch kho mới nhất</h3>
             </div>
-            <button type="button" onClick={() => onNavigate?.('transaction-history')}>Lịch sử</button>
+            {canAccessPage(currentUser, 'transaction-history') && (
+              <button type="button" onClick={() => onNavigate?.('transaction-history')}>Lịch sử</button>
+            )}
           </div>
 
           {loading ? (

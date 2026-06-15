@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../services/api'
+import { canAccessPage } from '../../utils/permissions'
 import './LowStockReportPage.css'
 
 const formatNumber = (value) =>
@@ -64,7 +65,7 @@ function getEndpointFromUrl(url) {
   return url.replace(api.defaults.baseURL, '').replace(/^\/api/, '')
 }
 
-export default function LowStockReportPage({ onNavigate }) {
+export default function LowStockReportPage({ onNavigate, currentUser }) {
   const [items, setItems] = useState([])
   const [count, setCount] = useState(0)
   const [next, setNext] = useState('')
@@ -139,10 +140,12 @@ export default function LowStockReportPage({ onNavigate }) {
             <Icon name="refresh" />
             <span>Làm mới</span>
           </button>
-          <button type="button" className="ls-primary" onClick={goToImportOrders}>
-            <Icon name="plus" />
-            <span>Lập phiếu nhập</span>
-          </button>
+          {canAccessPage(currentUser, 'import-orders') && (
+            <button type="button" className="ls-primary" onClick={goToImportOrders}>
+              <Icon name="plus" />
+              <span>Lập phiếu nhập</span>
+            </button>
+          )}
         </div>
       </section>
 

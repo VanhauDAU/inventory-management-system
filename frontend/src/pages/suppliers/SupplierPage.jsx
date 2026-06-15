@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { hasPermission } from '../../utils/permissions'
 import './SupplierPage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -242,7 +243,10 @@ function SupplierForm({ form, errors, editingSupplier, onChange, onSubmit, onCan
   )
 }
 
-export default function SupplierPage() {
+export default function SupplierPage({ currentUser }) {
+  const canAdd = hasPermission(currentUser, 'suppliers.add_supplier')
+  const canChange = hasPermission(currentUser, 'suppliers.change_supplier')
+  const canDelete = hasPermission(currentUser, 'suppliers.delete_supplier')
   const [suppliers, setSuppliers] = useState([])
   const [supplierProducts, setSupplierProducts] = useState([])
   const [selectedSupplier, setSelectedSupplier] = useState(null)
@@ -514,9 +518,11 @@ export default function SupplierPage() {
           <h2>Nhà phân phối</h2>
           <p>Quản lý thông tin liên hệ, mã số thuế, trạng thái hợp tác và các sản phẩm đang được cung cấp.</p>
         </div>
-        <button type="button" className="supplier-btn primary" onClick={openCreateForm}>
-          Thêm nhà phân phối
-        </button>
+        {canAdd && (
+          <button type="button" className="supplier-btn primary" onClick={openCreateForm}>
+            Thêm nhà phân phối
+          </button>
+        )}
       </section>
 
       <section className="supplier-stats">
@@ -594,8 +600,8 @@ export default function SupplierPage() {
                     <td>
                       <div className="supplier-row-actions">
                         <button type="button" className="supplier-action detail" onClick={() => openProductDetail(supplier)}>Sản phẩm</button>
-                        <button type="button" className="supplier-action edit" onClick={() => openEditForm(supplier)}>Sửa</button>
-                        <button type="button" className="supplier-action delete" onClick={() => setDeleteTarget(supplier)}>Xóa</button>
+                        {canChange && <button type="button" className="supplier-action edit" onClick={() => openEditForm(supplier)}>Sửa</button>}
+                        {canDelete && <button type="button" className="supplier-action delete" onClick={() => setDeleteTarget(supplier)}>Xóa</button>}
                       </div>
                     </td>
                   </tr>

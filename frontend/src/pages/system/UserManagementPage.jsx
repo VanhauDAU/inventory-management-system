@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../../services/api'
+import { hasPermission } from '../../utils/permissions'
 import './SystemAdminPage.css'
 
 const emptyForm = {
@@ -64,7 +65,7 @@ function formatDate(value) {
   }).format(new Date(value))
 }
 
-export default function UserManagementPage() {
+export default function UserManagementPage({ currentUser }) {
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
   const [loading, setLoading] = useState(true)
@@ -78,8 +79,12 @@ export default function UserManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm)
 
-  const currentUser = useMemo(() => getCurrentUser(), [])
-  const canManageAdminFlags = !!currentUser?.is_superuser
+  const resolvedCurrentUser = currentUser || getCurrentUser()
+  const canAdd = hasPermission(resolvedCurrentUser, 'auth.add_user')
+  const canChange = hasPermission(resolvedCurrentUser, 'auth.change_user')
+  const canDelete = hasPermission(resolvedCurrentUser, 'auth.delete_user')
+  const canManageAdminFlags = !!resolvedCurrentUser?.is_superuser
+  const canManage = canChange || canDelete
 
   async function loadData(signal) {
     setLoading(true)
@@ -245,7 +250,7 @@ export default function UserManagementPage() {
           <h2>Quản lý người dùng</h2>
           <p>Tạo tài khoản, khóa/mở tài khoản và gán nhóm quyền cho nhân sự sử dụng hệ thống.</p>
         </div>
-        <button type="button" className="system-btn primary" onClick={openCreateForm}>Thêm người dùng</button>
+        {canAdd && <button type="button" className="system-btn primary" onClick={openCreateForm}>Thêm người dùng</button>}
       </section>
 
       {error && !showForm && <div className="system-notice error">{error}</div>}
@@ -367,7 +372,7 @@ export default function UserManagementPage() {
                   <th>Nhóm quyền</th>
                   <th>Trạng thái</th>
                   <th>Lần đăng nhập cuối</th>
-                  <th></th>
+                  {canManage && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -391,12 +396,12 @@ export default function UserManagementPage() {
                       </div>
                     </td>
                     <td>{formatDate(user.last_login)}</td>
-                    <td>
+                    {canManage && <td>
                       <div className="system-actions">
-                        <button type="button" className="system-icon-btn" onClick={() => openEditForm(user)}>Sửa</button>
-                        <button type="button" className="system-icon-btn danger" onClick={() => setDeleteTarget(user)}>Xóa</button>
+                        {canChange && <button type="button" className="system-icon-btn" onClick={() => openEditForm(user)}>Sửa</button>}
+                        {canDelete && <button type="button" className="system-icon-btn danger" onClick={() => setDeleteTarget(user)}>Xóa</button>}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>
