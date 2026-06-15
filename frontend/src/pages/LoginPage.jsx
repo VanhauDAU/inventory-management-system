@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { login } from '../services/authService'
 import '../styles/LoginPage.css'
 
-function LoginPage() {
-  const navigate = useNavigate()
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+
+function LoginPage({ onLogin }) {
   const [form, setForm] = useState({ username: '', password: '' })
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
@@ -21,7 +20,6 @@ function LoginPage() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm((prev) => ({ ...prev, [name]: value }))
-    // Xóa lỗi khi user bắt đầu nhập lại
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }))
     if (apiError) setApiError('')
   }
@@ -36,19 +34,32 @@ function LoginPage() {
 
     setLoading(true)
     try {
-      const authData = await login(form.username, form.password)
-      console.log('Login success:', {
-        username: form.username,
-        hasAccessToken: Boolean(authData.access),
-        hasRefreshToken: Boolean(authData.refresh),
+      const response = await fetch(`${apiUrl}/token/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: form.username.trim(),
+          password: form.password,
+        }),
       })
-      navigate('/products')
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+          data.non_field_errors?.[0] ||
+          'Đăng nhập thất bại. Vui lòng thử lại.'
+        )
+      }
+
+      localStorage.removeItem('current_user')
+      localStorage.setItem('access_token', data.access)
+      localStorage.setItem('refresh_token', data.refresh)
+      localStorage.setItem('current_username', form.username.trim())
+      onLogin?.()
     } catch (err) {
-      const msg =
-        err.response?.data?.detail ||
-        err.response?.data?.non_field_errors?.[0] ||
-        'Đăng nhập thất bại. Vui lòng thử lại.'
-      setApiError(msg)
+      setApiError(err.message || 'Đăng nhập thất bại. Vui lòng thử lại.')
     } finally {
       setLoading(false)
     }
@@ -59,7 +70,7 @@ function LoginPage() {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">📦</div>
-          <h1 className="login-title">Quản lý sản phẩm</h1>
+          <h1 className="login-title">Quản lý sản phẩm thông minh</h1>
           <p className="login-subtitle">Đăng nhập để tiếp tục</p>
         </div>
 

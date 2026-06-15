@@ -43,7 +43,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["quantity", "created_at", "updated_at"]
         extra_kwargs = {
             "sku": {"required": False},
             "selling_price": {"required": False},
@@ -53,6 +53,9 @@ class ProductSerializer(serializers.ModelSerializer):
         legacy_price = attrs.pop("price", None)
         if "selling_price" not in attrs and legacy_price is not None:
             attrs["selling_price"] = legacy_price
+
+        if attrs.get("barcode") == "":
+            attrs["barcode"] = None
 
         if self.instance is None and "selling_price" not in attrs:
             raise serializers.ValidationError(

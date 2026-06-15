@@ -1,6 +1,15 @@
+import django_filters
+from django.db import models
+from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, viewsets
-from rest_framework.permissions import IsAuthenticated
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from rest_framework import filters, parsers, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+
+from accounts.permissions import ViewDjangoModelPermissions
+from inventory.models import StockTransactionItem
+from inventory.serializers import StockTransactionItemSerializer
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -19,16 +28,80 @@ class ProductOrderingFilter(filters.OrderingFilter):
         ]
 
 
+class ProductFilter(django_filters.FilterSet):
+    min_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="gte")
+    max_price = django_filters.NumberFilter(field_name="selling_price", lookup_expr="lte")
+    min_quantity = django_filters.NumberFilter(field_name="quantity", lookup_expr="gte")
+    max_quantity = django_filters.NumberFilter(field_name="quantity", lookup_expr="lte")
+    low_stock = django_filters.BooleanFilter(method="filter_low_stock")
+
+    class Meta:
+        model = Product
+        fields = ["category", "supplier", "status"]
+
+    def filter_low_stock(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        return queryset.filter(quantity__lte=models.F("minimum_stock"))
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Products"],
+        summary="List products",
+        description=(
+            "Return products with category, supplier, stock, price, status, and image fields. "
+            "Supports search, filters, ordering, and pagination."
+        ),
+    ),
+    retrieve=extend_schema(
+        tags=["Products"],
+        summary="Retrieve product",
+        description="Return one product with category and supplier details.",
+    ),
+    create=extend_schema(
+        tags=["Products"],
+        summary="Create product",
+        description=(
+            "Create a product. Supports multipart/form-data for image upload. "
+            "SKU is generated automatically when omitted."
+        ),
+    ),
+    update=extend_schema(
+        tags=["Products"],
+        summary="Replace product",
+        description="Replace all editable product fields. Supports multipart/form-data for image upload.",
+    ),
+    partial_update=extend_schema(
+        tags=["Products"],
+        summary="Update product",
+        description="Partially update product fields. Supports multipart/form-data for image upload.",
+    ),
+    destroy=extend_schema(
+        tags=["Products"],
+        summary="Delete product",
+        description=(
+            "Delete a product only when it has no protected business references. "
+            "Products used in stock transaction items return HTTP 409."
+        ),
+        responses={
+            204: OpenApiResponse(description="Product deleted."),
+            409: OpenApiResponse(description="Product cannot be deleted because it is in use."),
+        },
+    ),
+)
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category", "supplier").all().order_by("id")
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ViewDjangoModelPermissions]
+    parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
         ProductOrderingFilter,
     ]
-    filterset_fields = ["category", "supplier", "status"]
+    filterset_class = ProductFilter
     search_fields = ["sku", "barcode", "name", "description"]
     ordering_fields = [
         "id",
@@ -42,3 +115,49 @@ class ProductViewSet(viewsets.ModelViewSet):
         "created_at",
         "updated_at",
     ]
+
+    def destroy(self, request, *args, **kwargs):
+        product = self.get_object()
+        try:
+            product.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    "detail": (
+                        "Không thể xóa sản phẩm vì đã được sử dụng trong phiếu kho "
+                        "hoặc dữ liệu nghiệp vụ khác. Hãy chuyển trạng thái sản phẩm "
+                        "sang inactive/discontinued nếu không còn kinh doanh."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @extend_schema(
+        tags=["Products"],
+        summary="List product stock history",
+        description="Return stock transaction item history for the selected product.",
+        responses={200: StockTransactionItemSerializer(many=True)},
+    )
+    @action(detail=True, methods=["get"], url_path="stock-history")
+    def stock_history(self, request, pk=None):
+        product = self.get_object()
+        queryset = (
+            StockTransactionItem.objects.select_related(
+                "stock_transaction",
+                "product",
+                "product__category",
+                "product__supplier",
+            )
+            .filter(product=product)
+            .order_by("-stock_transaction__created_at", "-id")
+        )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = StockTransactionItemSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = StockTransactionItemSerializer(queryset, many=True)
+        return Response(serializer.data)

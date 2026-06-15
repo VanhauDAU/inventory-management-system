@@ -15,25 +15,47 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from django.conf import settings
+from django.conf.urls.static import static
 from django.urls import include, path
 from drf_spectacular.utils import OpenApiTypes, extend_schema
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+from accounts.views import PermissionViewSet, RoleViewSet, UserViewSet, current_user
 from categories.views import CategoryViewSet
+from inventory.views import (
+    StockTransactionItemViewSet,
+    StockTransactionViewSet,
+    WarehouseViewSet,
+    WarehouseStockViewSet,
+)
 from products.views import ProductViewSet
+from suppliers.views import SupplierViewSet
 
 router = DefaultRouter()
+router.register(r"users", UserViewSet, basename="user")
+router.register(r"roles", RoleViewSet, basename="role")
+router.register(r"permissions", PermissionViewSet, basename="permission")
 router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"products", ProductViewSet, basename="product")
+router.register(r"suppliers", SupplierViewSet, basename="supplier")
+router.register(r"warehouses", WarehouseViewSet, basename="warehouse")
+router.register(r"warehouse-stocks", WarehouseStockViewSet, basename="warehouse-stock")
+router.register(r"stock-transactions", StockTransactionViewSet, basename="stock-transaction")
+router.register(
+    r"stock-transaction-items",
+    StockTransactionItemViewSet,
+    basename="stock-transaction-item",
+)
 
 
 @extend_schema(
@@ -55,5 +77,11 @@ urlpatterns = [
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/me/", current_user, name="current_user"),
+    path("api/ai/", include("ai_advisor.urls")),
+    path("api/reports/", include("reports.urls")),
     path("api/", include(router.urls)),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

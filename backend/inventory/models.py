@@ -24,6 +24,34 @@ class Warehouse(models.Model):
         return self.name
 
 
+class WarehouseStock(models.Model):
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name="stock_items",
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="warehouse_stocks",
+    )
+    quantity = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "warehouse_stocks"
+        ordering = ["warehouse__name", "product__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["warehouse", "product"],
+                name="unique_product_per_warehouse",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.warehouse} - {self.product}: {self.quantity}"
+
+
 class StockTransaction(models.Model):
     class TransactionType(models.TextChoices):
         IMPORT = "import", "Import"
