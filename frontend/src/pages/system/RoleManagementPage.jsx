@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../../services/api'
+import { hasPermission } from '../../utils/permissions'
 import './SystemAdminPage.css'
 
 const emptyForm = {
@@ -68,7 +69,11 @@ function getModuleLabel(moduleName) {
     .join(' / ')
 }
 
-export default function RoleManagementPage() {
+export default function RoleManagementPage({ currentUser }) {
+  const canAdd = hasPermission(currentUser, 'auth.add_group')
+  const canChange = hasPermission(currentUser, 'auth.change_group')
+  const canDelete = hasPermission(currentUser, 'auth.delete_group')
+  const canManage = canChange || canDelete
   const [roles, setRoles] = useState([])
   const [permissions, setPermissions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -259,7 +264,7 @@ export default function RoleManagementPage() {
           <h2>Nhóm quyền</h2>
           <p>Tạo vai trò theo nghiệp vụ và gán các quyền Django tương ứng để quản lý truy cập theo nhóm.</p>
         </div>
-        <button type="button" className="system-btn primary" onClick={openCreateForm}>Thêm nhóm quyền</button>
+        {canAdd && <button type="button" className="system-btn primary" onClick={openCreateForm}>Thêm nhóm quyền</button>}
       </section>
 
       {error && !showForm && <div className="system-notice error">{error}</div>}
@@ -430,7 +435,7 @@ export default function RoleManagementPage() {
                   <th>Nhóm quyền</th>
                   <th>Permission</th>
                   <th>Người dùng</th>
-                  <th></th>
+                  {canManage && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -452,12 +457,12 @@ export default function RoleManagementPage() {
                       </div>
                     </td>
                     <td><span className="system-badge green">{role.users_count || 0} người dùng</span></td>
-                    <td>
+                    {canManage && <td>
                       <div className="system-actions">
-                        <button type="button" className="system-icon-btn" onClick={() => openEditForm(role)}>Sửa</button>
-                        <button type="button" className="system-icon-btn danger" onClick={() => setDeleteTarget(role)}>Xóa</button>
+                        {canChange && <button type="button" className="system-icon-btn" onClick={() => openEditForm(role)}>Sửa</button>}
+                        {canDelete && <button type="button" className="system-icon-btn danger" onClick={() => setDeleteTarget(role)}>Xóa</button>}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

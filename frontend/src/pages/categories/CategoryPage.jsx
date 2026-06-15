@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { hasPermission } from '../../utils/permissions'
 import './CategoryPage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -205,7 +206,11 @@ function CategoryForm({ form, errors, categories, editingCategory, onChange, onS
   )
 }
 
-export default function CategoryPage() {
+export default function CategoryPage({ currentUser }) {
+  const canAdd = hasPermission(currentUser, 'categories.add_category')
+  const canChange = hasPermission(currentUser, 'categories.change_category')
+  const canDelete = hasPermission(currentUser, 'categories.delete_category')
+  const canManage = canChange || canDelete
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -462,9 +467,11 @@ export default function CategoryPage() {
           <h2>Danh mục sản phẩm</h2>
           <p>Quản lý danh mục cha, danh mục con, trạng thái sử dụng và số sản phẩm trong từng danh mục.</p>
         </div>
-        <button type="button" className="category-btn primary" onClick={openCreateForm}>
-          Thêm danh mục
-        </button>
+        {canAdd && (
+          <button type="button" className="category-btn primary" onClick={openCreateForm}>
+            Thêm danh mục
+          </button>
+        )}
       </section>
 
       <section className="category-stats">
@@ -525,7 +532,7 @@ export default function CategoryPage() {
                   <th>Danh mục con</th>
                   <th>Trạng thái</th>
                   <th>Cập nhật</th>
-                  <th>Thao tác</th>
+                  {canManage && <th>Thao tác</th>}
                 </tr>
               </thead>
               <tbody>
@@ -549,12 +556,12 @@ export default function CategoryPage() {
                       </span>
                     </td>
                     <td>{formatDateTime(category.updated_at)}</td>
-                    <td>
+                    {canManage && <td>
                       <div className="category-row-actions">
-                        <button type="button" className="category-action edit" onClick={() => openEditForm(category)}>Sửa</button>
-                        <button type="button" className="category-action delete" onClick={() => setDeleteTarget(category)}>Xóa</button>
+                        {canChange && <button type="button" className="category-action edit" onClick={() => openEditForm(category)}>Sửa</button>}
+                        {canDelete && <button type="button" className="category-action delete" onClick={() => setDeleteTarget(category)}>Xóa</button>}
                       </div>
-                    </td>
+                    </td>}
                   </tr>
                 ))}
               </tbody>

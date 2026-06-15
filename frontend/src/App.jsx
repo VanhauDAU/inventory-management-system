@@ -64,22 +64,22 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout, curre
 
   switch (pageKey) {
     case 'home':
-      return <HomePage stats={stats} onStatsChange={onStatsChange} onNavigate={onNavigate} />
+      return <HomePage stats={stats} onStatsChange={onStatsChange} onNavigate={onNavigate} currentUser={currentUser} />
 
     case 'product-list':
-      return <ProductListPage onStatsChange={onStatsChange} />
+      return <ProductListPage onStatsChange={onStatsChange} currentUser={currentUser} />
 
     case 'product-add':
-      return <ProductListPage onStatsChange={onStatsChange} />
+      return <ProductListPage onStatsChange={onStatsChange} currentUser={currentUser} />
 
     case 'product-categories':
-      return <CategoryPage />
+      return <CategoryPage currentUser={currentUser} />
 
     case 'product-suppliers':
-      return <SupplierPage />
+      return <SupplierPage currentUser={currentUser} />
 
     case 'warehouse-list':
-      return <WarehousePage />
+      return <WarehousePage currentUser={currentUser} />
 
     case 'warehouse-by-product':
       return <PlaceholderPage title="Tồn kho theo sản phẩm" description="Xem số lượng tồn kho của từng sản phẩm trên tất cả kho." icon="📦" />
@@ -100,19 +100,19 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout, curre
       return <StockTransactionPage transactionType="all" />
 
     case 'report-overview':
-      return <InventoryOverviewPage onNavigate={onNavigate} />
+      return <InventoryOverviewPage onNavigate={onNavigate} currentUser={currentUser} />
 
     case 'report-low-stock':
-      return <LowStockReportPage onNavigate={onNavigate} />
+      return <LowStockReportPage onNavigate={onNavigate} currentUser={currentUser} />
 
     case 'report-value':
       return <InventoryValueReportPage />
 
     case 'system-users':
-      return <UserManagementPage />
+      return <UserManagementPage currentUser={currentUser} />
 
     case 'system-roles':
-      return <RoleManagementPage />
+      return <RoleManagementPage currentUser={currentUser} />
 
     // Khi bấm Đăng xuất: xóa token và về trang login
     case 'system-logout':

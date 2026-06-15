@@ -3,7 +3,7 @@ export const PAGE_PERMISSION_RULES = {
   'system-logout': { public: true },
 
   'product-list': { any: ['products.view_product'] },
-  'product-add': { any: ['products.add_product'] },
+  'product-add': { all: ['products.add_product', 'products.view_product'] },
   'product-categories': { any: ['categories.view_category'] },
   'product-suppliers': { any: ['suppliers.view_supplier'] },
 
@@ -11,17 +11,44 @@ export const PAGE_PERMISSION_RULES = {
   'warehouse-by-product': { any: ['inventory.view_warehousestock', 'products.view_product'] },
   'warehouse-by-location': { any: ['inventory.view_warehouse'] },
 
-  'import-orders': { any: ['inventory.add_stocktransaction'] },
-  'export-orders': { any: ['inventory.add_stocktransaction'] },
-  'adjustment-orders': { any: ['inventory.add_stocktransaction'] },
-  'transaction-history': { any: ['inventory.view_stocktransaction'] },
+  'import-orders': {
+    all: [
+      'inventory.add_stocktransaction',
+      'inventory.view_stocktransaction',
+      'inventory.view_warehouse',
+      'products.view_product',
+    ],
+  },
+  'export-orders': {
+    all: [
+      'inventory.add_stocktransaction',
+      'inventory.view_stocktransaction',
+      'inventory.view_warehouse',
+      'products.view_product',
+    ],
+  },
+  'adjustment-orders': {
+    all: [
+      'inventory.add_stocktransaction',
+      'inventory.view_stocktransaction',
+      'inventory.view_warehouse',
+      'products.view_product',
+    ],
+  },
+  'transaction-history': {
+    all: [
+      'inventory.view_stocktransaction',
+      'inventory.view_warehouse',
+      'products.view_product',
+    ],
+  },
 
   'report-overview': { all: ['products.view_product', 'inventory.view_warehouse', 'inventory.view_stocktransaction'] },
   'report-low-stock': { any: ['products.view_product'] },
   'report-value': { any: ['products.view_product'] },
 
-  'system-users': { any: ['auth.view_user'] },
-  'system-roles': { any: ['auth.view_group'] },
+  'system-users': { all: ['auth.view_user', 'auth.view_group'] },
+  'system-roles': { all: ['auth.view_group', 'auth.view_permission'] },
 }
 
 export function isSystemAdmin(user) {
@@ -32,6 +59,10 @@ export function hasAnyPermission(user, permissions = []) {
   if (user?.is_superuser) return true
   const userPermissions = new Set(user?.permissions || [])
   return permissions.some((permission) => userPermissions.has(permission))
+}
+
+export function hasPermission(user, permission) {
+  return hasAnyPermission(user, [permission])
 }
 
 export function canAccessPage(user, pageKey) {

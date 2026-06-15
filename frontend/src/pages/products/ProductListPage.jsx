@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import ProductForm from '../../components/ProductForm'
+import { hasPermission } from '../../utils/permissions'
 import './ProductListPage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -212,7 +213,10 @@ function createProductFormData(payload) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────────
-export default function ProductListPage({ onStatsChange }) {
+export default function ProductListPage({ onStatsChange, currentUser }) {
+  const canAdd = hasPermission(currentUser, 'products.add_product')
+  const canChange = hasPermission(currentUser, 'products.change_product')
+  const canDelete = hasPermission(currentUser, 'products.delete_product')
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -572,17 +576,19 @@ export default function ProductListPage({ onStatsChange }) {
           <span className="plp-count">{totalCount} sản phẩm</span>
           <div className="plp-table-actions">
             <span className="plp-mode-dot api">API</span>
-            <button
-              type="button"
-              className="plp-add-btn"
-              onClick={() => {
-                setCreateError('')
-                setShowAddModal(true)
-              }}
-            >
-              <span>+</span>
-              Thêm sản phẩm
-            </button>
+            {canAdd && (
+              <button
+                type="button"
+                className="plp-add-btn"
+                onClick={() => {
+                  setCreateError('')
+                  setShowAddModal(true)
+                }}
+              >
+                <span>+</span>
+                Thêm sản phẩm
+              </button>
+            )}
           </div>
         </div>
 
@@ -656,26 +662,30 @@ export default function ProductListPage({ onStatsChange }) {
                           >
                             Chi tiết
                           </button>
-                          <button
-                            className="plp-action-btn edit"
-                            type="button"
-                            onClick={() => {
-                              setEditError('')
-                              setEditingProduct(product)
-                            }}
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            className="plp-action-btn delete"
-                            type="button"
-                            onClick={() => {
-                              setDeleteError('')
-                              setDeleteTarget(product)
-                            }}
-                          >
-                            Xóa
-                          </button>
+                          {canChange && (
+                            <button
+                              className="plp-action-btn edit"
+                              type="button"
+                              onClick={() => {
+                                setEditError('')
+                                setEditingProduct(product)
+                              }}
+                            >
+                              Sửa
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              className="plp-action-btn delete"
+                              type="button"
+                              onClick={() => {
+                                setDeleteError('')
+                                setDeleteTarget(product)
+                              }}
+                            >
+                              Xóa
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -764,17 +774,19 @@ export default function ProductListPage({ onStatsChange }) {
                   </div>
                 </div>
 
-                <button
-                  className="plp-detail-edit"
-                  type="button"
-                  onClick={() => {
-                    setEditError('')
-                    setEditingProduct(selectedProduct)
-                    setSelectedProduct(null)
-                  }}
-                >
-                  Sửa sản phẩm
-                </button>
+                {canChange && (
+                  <button
+                    className="plp-detail-edit"
+                    type="button"
+                    onClick={() => {
+                      setEditError('')
+                      setEditingProduct(selectedProduct)
+                      setSelectedProduct(null)
+                    }}
+                  >
+                    Sửa sản phẩm
+                  </button>
+                )}
               </div>
             </div>
 

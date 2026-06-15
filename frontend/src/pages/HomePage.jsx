@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import api from '../services/api'
+import { canAccessPage, hasPermission } from '../utils/permissions'
 import './HomePage.css'
 
 const formatCurrency = (value) =>
@@ -118,7 +119,11 @@ const quickLinks = [
   { key: 'warehouse-list', label: 'Kho hàng', desc: 'Theo dõi sức chứa và điểm lưu kho', icon: 'warehouse' },
 ]
 
-export default function HomePage({ stats, onStatsChange, onNavigate }) {
+export default function HomePage({ stats, onStatsChange, onNavigate, currentUser }) {
+  const canViewProducts = hasPermission(currentUser, 'products.view_product')
+  const canViewWarehouses = hasPermission(currentUser, 'inventory.view_warehouse')
+  const canViewTransactions = hasPermission(currentUser, 'inventory.view_stocktransaction')
+  const canViewSummary = canAccessPage(currentUser, 'report-overview')
   const [summary, setSummary] = useState(null)
   const [products, setProducts] = useState([])
   const [warehouses, setWarehouses] = useState([])
@@ -135,10 +140,18 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
 
       try {
         const [summaryResponse, productList, warehouseList, transactionList] = await Promise.all([
-          api.get('/reports/inventory/summary/', { signal: controller.signal }),
-          fetchAllPages('/products/?ordering=name', controller.signal),
-          fetchAllPages('/warehouses/?ordering=name', controller.signal),
-          fetchAllPages('/stock-transactions/?ordering=-created_at', controller.signal),
+          canViewSummary
+            ? api.get('/reports/inventory/summary/', { signal: controller.signal })
+            : Promise.resolve({ data: null }),
+          canViewProducts
+            ? fetchAllPages('/products/?ordering=name', controller.signal)
+            : Promise.resolve([]),
+          canViewWarehouses
+            ? fetchAllPages('/warehouses/?ordering=name', controller.signal)
+            : Promise.resolve([]),
+          canViewTransactions
+            ? fetchAllPages('/stock-transactions/?ordering=-created_at', controller.signal)
+            : Promise.resolve([]),
         ])
 
         setSummary(summaryResponse.data)
@@ -163,7 +176,7 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
 
     loadDashboard()
     return () => controller.abort()
-  }, [onStatsChange])
+  }, [canViewProducts, canViewSummary, canViewTransactions, canViewWarehouses, onStatsChange])
 
   const dashboard = useMemo(() => {
     const totalProducts = Number(summary?.total_products ?? stats?.totalProducts ?? products.length)
@@ -220,11 +233,12 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
   }, [products, stats, summary, transactions, warehouses])
 
   const statCards = [
-    { label: 'Sản phẩm đang quản lý', value: formatNumber(dashboard.totalProducts), hint: `${formatNumber(dashboard.lowStockProducts.length)} mặt hàng cần chú ý`, icon: 'package', tone: 'blue' },
-    { label: 'Tổng tồn kho', value: formatNumber(dashboard.totalQuantity), hint: `${formatNumber(dashboard.warehousesCount)} kho đang theo dõi`, icon: 'warehouse', tone: 'cyan' },
-    { label: 'Giá trị tồn kho', value: formatCurrency(dashboard.totalValue), hint: `Bình quân ${formatCurrency(dashboard.averageValue)}/sản phẩm`, icon: 'wallet', tone: 'green' },
-    { label: 'Giao dịch kho', value: formatNumber(dashboard.transactionTotal), hint: `${formatNumber(dashboard.importCount)} nhập · ${formatNumber(dashboard.exportCount)} xuất`, icon: 'chart', tone: 'violet' },
-  ]
+    { visible: canViewProducts, label: 'Sản phẩm đang quản lý', value: formatNumber(dashboard.totalProducts), hint: `${formatNumber(dashboard.lowStockProducts.length)} mặt hàng cần chú ý`, icon: 'package', tone: 'blue' },
+    { visible: canViewWarehouses, label: 'Tổng tồn kho', value: formatNumber(dashboard.totalQuantity), hint: `${formatNumber(dashboard.warehousesCount)} kho đang theo dõi`, icon: 'warehouse', tone: 'cyan' },
+    { visible: canViewProducts, label: 'Giá trị tồn kho', value: formatCurrency(dashboard.totalValue), hint: `Bình quân ${formatCurrency(dashboard.averageValue)}/sản phẩm`, icon: 'wallet', tone: 'green' },
+    { visible: canViewTransactions, label: 'Giao dịch kho', value: formatNumber(dashboard.transactionTotal), hint: `${formatNumber(dashboard.importCount)} nhập · ${formatNumber(dashboard.exportCount)} xuất`, icon: 'chart', tone: 'violet' },
+  ].filter((card) => card.visible)
+  const visibleQuickLinks = quickLinks.filter((link) => canAccessPage(currentUser, link.key))
 
   return (
     <div className="home-page">
@@ -234,14 +248,14 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
           <h2>Tổng quan dữ liệu sản phẩm và tồn kho</h2>
           <p>Theo dõi nhanh giá trị tồn, hàng cần nhập thêm, phân bổ theo kho và lịch sử nhập xuất mới nhất từ dữ liệu API.</p>
         </div>
-        <div className="home-hero-panel" aria-label="Tóm tắt nhập xuất">
+        {canViewTransactions && <div className="home-hero-panel" aria-label="Tóm tắt nhập xuất">
           <div>
             <span>Tỷ trọng phiếu xuất</span>
             <strong>{dashboard.exportRatio}%</strong>
           </div>
           <div className="home-progress"><span style={{ width: `${dashboard.exportRatio}%` }} /></div>
           <small>{formatNumber(dashboard.importCount)} nhập · {formatNumber(dashboard.exportCount)} xuất · {formatNumber(dashboard.adjustmentCount)} điều chỉnh</small>
-        </div>
+        </div>}
       </section>
 
       {error && <div className="home-alert">{error}</div>}
@@ -260,13 +274,15 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
       </div>
 
       <div className="home-dashboard-grid">
-        <section className="home-panel home-panel-large">
+        {canViewProducts && <section className="home-panel home-panel-large">
           <div className="home-panel-head">
             <div>
               <span className="home-eyebrow">Cảnh báo tồn kho</span>
               <h3>Sản phẩm dưới ngưỡng tối thiểu</h3>
             </div>
-            <button type="button" onClick={() => onNavigate('report-low-stock')}>Xem báo cáo</button>
+            {canAccessPage(currentUser, 'report-low-stock') && (
+              <button type="button" onClick={() => onNavigate('report-low-stock')}>Xem báo cáo</button>
+            )}
           </div>
 
           {loading ? (
@@ -295,9 +311,9 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
               })}
             </div>
           )}
-        </section>
+        </section>}
 
-        <section className="home-panel">
+        {canAccessPage(currentUser, 'warehouse-list') && <section className="home-panel">
           <div className="home-panel-head compact">
             <div>
               <span className="home-eyebrow">Kho hàng</span>
@@ -316,9 +332,9 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
               </button>
             ))}
           </div>
-        </section>
+        </section>}
 
-        <section className="home-panel">
+        {canViewProducts && <section className="home-panel">
           <div className="home-panel-head compact">
             <div>
               <span className="home-eyebrow">Danh mục</span>
@@ -341,9 +357,9 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
               )
             })}
           </div>
-        </section>
+        </section>}
 
-        <section className="home-panel home-panel-large">
+        {canAccessPage(currentUser, 'transaction-history') && <section className="home-panel home-panel-large">
           <div className="home-panel-head">
             <div>
               <span className="home-eyebrow">Luồng kho</span>
@@ -376,10 +392,10 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
               })}
             </div>
           )}
-        </section>
+        </section>}
       </div>
 
-      <section className="home-panel">
+      {visibleQuickLinks.length > 0 && <section className="home-panel">
         <div className="home-panel-head compact">
           <div>
             <span className="home-eyebrow">Thao tác nhanh</span>
@@ -387,7 +403,7 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
           </div>
         </div>
         <div className="home-quick-grid">
-          {quickLinks.map((link) => (
+          {visibleQuickLinks.map((link) => (
             <button key={link.key} type="button" className="home-quick-card" onClick={() => onNavigate(link.key)}>
               <span className="home-quick-icon"><Icon name={link.icon} /></span>
               <span>
@@ -398,7 +414,7 @@ export default function HomePage({ stats, onStatsChange, onNavigate }) {
             </button>
           ))}
         </div>
-      </section>
+      </section>}
     </div>
   )
 }

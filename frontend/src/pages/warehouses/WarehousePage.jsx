@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { hasPermission } from '../../utils/permissions'
 import './WarehousePage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
@@ -181,7 +182,10 @@ function WarehouseForm({ form, errors, editingWarehouse, onChange, onSubmit, onC
   )
 }
 
-export default function WarehousePage() {
+export default function WarehousePage({ currentUser }) {
+  const canAdd = hasPermission(currentUser, 'inventory.add_warehouse')
+  const canChange = hasPermission(currentUser, 'inventory.change_warehouse')
+  const canDelete = hasPermission(currentUser, 'inventory.delete_warehouse')
   const [warehouses, setWarehouses] = useState([])
   const [warehouseStocks, setWarehouseStocks] = useState([])
   const [selectedWarehouse, setSelectedWarehouse] = useState(null)
@@ -457,9 +461,11 @@ export default function WarehousePage() {
           <h2>Danh sách kho</h2>
           <p>Xem mỗi kho đang có bao nhiêu loại sản phẩm, tổng số lượng tồn và lịch sử phiếu kho.</p>
         </div>
-        <button type="button" className="warehouse-btn primary" onClick={openCreateForm}>
-          Thêm kho
-        </button>
+        {canAdd && (
+          <button type="button" className="warehouse-btn primary" onClick={openCreateForm}>
+            Thêm kho
+          </button>
+        )}
       </section>
 
       <section className="warehouse-stats">
@@ -534,8 +540,8 @@ export default function WarehousePage() {
                     <td>
                       <div className="warehouse-row-actions">
                         <button type="button" className="warehouse-action detail" onClick={() => openStockDetail(warehouse)}>Tồn kho</button>
-                        <button type="button" className="warehouse-action edit" onClick={() => openEditForm(warehouse)}>Sửa</button>
-                        <button type="button" className="warehouse-action delete" onClick={() => setDeleteTarget(warehouse)}>Xóa</button>
+                        {canChange && <button type="button" className="warehouse-action edit" onClick={() => openEditForm(warehouse)}>Sửa</button>}
+                        {canDelete && <button type="button" className="warehouse-action delete" onClick={() => setDeleteTarget(warehouse)}>Xóa</button>}
                       </div>
                     </td>
                   </tr>
