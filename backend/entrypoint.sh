@@ -12,4 +12,6 @@ python manage.py migrate
 python manage.py collectstatic --noinput
 
 exec gunicorn product_management.wsgi:application \
-  --bind "0.0.0.0:${PORT:-8000}"
+  --bind "0.0.0.0:${PORT:-8000}" \
+  --access-logfile - \
+  --error-logfile -
