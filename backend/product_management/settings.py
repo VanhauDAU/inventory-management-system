@@ -211,3 +211,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.2")
+OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", OPENAI_MODEL)

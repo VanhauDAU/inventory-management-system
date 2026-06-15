@@ -10,6 +10,23 @@ class OpenAIClientError(Exception):
     pass
 
 
+def create_chat_response(api_key, model, instructions, messages, timeout=30):
+    request_payload = {
+        "model": model,
+        "instructions": instructions,
+        "input": messages,
+        "max_output_tokens": 700,
+        "store": False,
+    }
+
+    response_data = _create_response(api_key, request_payload, timeout)
+    output_text = _extract_output_text(response_data)
+    if not output_text:
+        raise OpenAIClientError("OpenAI response did not include output text.")
+
+    return output_text.strip()
+
+
 def create_inventory_analysis(api_key, model, payload, timeout=20):
     request_payload = {
         "model": model,
@@ -52,6 +69,19 @@ def create_inventory_analysis(api_key, model, payload, timeout=20):
         },
     }
 
+    response_data = _create_response(api_key, request_payload, timeout)
+
+    output_text = _extract_output_text(response_data)
+    if not output_text:
+        raise OpenAIClientError("OpenAI response did not include output text.")
+
+    try:
+        return json.loads(output_text)
+    except json.JSONDecodeError as exc:
+        raise OpenAIClientError("OpenAI response was not valid JSON.") from exc
+
+
+def _create_response(api_key, request_payload, timeout):
     request = urllib.request.Request(
         OPENAI_RESPONSES_URL,
         data=json.dumps(request_payload).encode("utf-8"),
@@ -71,14 +101,7 @@ def create_inventory_analysis(api_key, model, payload, timeout=20):
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
         raise OpenAIClientError(str(exc)) from exc
 
-    output_text = _extract_output_text(response_data)
-    if not output_text:
-        raise OpenAIClientError("OpenAI response did not include output text.")
-
-    try:
-        return json.loads(output_text)
-    except json.JSONDecodeError as exc:
-        raise OpenAIClientError("OpenAI response was not valid JSON.") from exc
+    return response_data
 
 
 def _extract_output_text(response_data):

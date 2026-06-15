@@ -44,6 +44,7 @@ Hệ thống quản lý sản phẩm và tồn kho được xây dựng theo mô
 - Báo cáo giá trị tồn kho theo sản phẩm, danh mục, nhà cung cấp và kho.
 - Gợi ý nhập hàng dựa trên ngưỡng tồn kho và tốc độ xuất trong 30 ngày gần nhất.
 - Tùy chọn dùng OpenAI API để bổ sung phân tích; hệ thống tự chuyển về thuật toán rule-based nếu không cấu hình API key hoặc khi API gặp lỗi.
+- Chatbot ProductMS hỗ trợ hỏi đáp về sản phẩm, tồn kho và giao dịch theo quyền của người dùng.
 
 ### Giao diện
 
@@ -150,6 +151,9 @@ DJANGO_SECRET_KEY=replace-with-a-secret-key
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+DJANGO_SUPERUSER_USERNAME=
+DJANGO_SUPERUSER_EMAIL=
+DJANGO_SUPERUSER_PASSWORD=
 
 DB_ENGINE=postgres
 POSTGRES_DB=product_management
@@ -161,6 +165,7 @@ POSTGRES_HOST_PORT=5432
 
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.2
+OPENAI_CHAT_MODEL=gpt-5.2
 ```
 
 `POSTGRES_HOST=db` là hostname dùng bên trong Docker Compose. Không commit file `.env` chứa thông tin thật.
@@ -172,6 +177,8 @@ docker compose up --build -d
 ```
 
 Backend tự chờ PostgreSQL sẵn sàng và chạy migration khi container khởi động.
+Nếu các biến `DJANGO_SUPERUSER_*` được cấu hình, backend cũng tự tạo tài
+khoản quản trị trong lần khởi động đầu tiên.
 
 Kiểm tra trạng thái và log:
 
@@ -344,6 +351,7 @@ POST /api/token/refresh/
 | Chi tiết phiếu kho | `/api/stock-transaction-items/` |
 | Báo cáo | `/api/reports/` |
 | Gợi ý nhập hàng | `GET /api/ai/inventory-advice/` |
+| Chatbot | `POST /api/ai/chat/` |
 | OpenAPI schema | `GET /api/schema/` |
 
 Các resource dùng router hỗ trợ thao tác REST tiêu chuẩn tùy theo quyền:
