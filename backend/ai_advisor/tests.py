@@ -195,3 +195,71 @@ class InventoryAdviceOpenAITests(APITestCase):
         self.assertEqual(response.data["meta"]["mode"], "rule_based")
         self.assertIn("ai_fallback", response.data["meta"])
         self.assertEqual(response.data["meta"]["ai_fallback_reason"], "HTTP 401: invalid api key")
+
+
+class ChatbotAPITests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="chat-user", password="password123")
+        self.category = Category.objects.create(name="Chat category")
+        Product.objects.create(
+            sku="CHAT-001",
+            name="Chat product",
+            category=self.category,
+            cost_price=Decimal("10.00"),
+            selling_price=Decimal("15.00"),
+            quantity=2,
+            minimum_stock=5,
+        )
+
+    def test_chat_requires_authentication(self):
+        response = self.client.post("/api/ai/chat/", {"message": "Xin chào"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(OPENAI_API_KEY="")
+    def test_chat_returns_service_unavailable_without_api_key(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post("/api/ai/chat/", {"message": "Xin chào"}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertIn("cấu hình OpenAI", response.data["detail"])
+
+    @override_settings(
+        OPENAI_API_KEY="test-key",
+        OPENAI_MODEL="gpt-test",
+        OPENAI_CHAT_MODEL="gpt-chat-test",
+    )
+    @patch("ai_advisor.chat_service.create_chat_response")
+    def test_chat_sends_recent_history_and_permission_scoped_context(self, mock_chat):
+        self.user.user_permissions.add(
+            Permission.objects.get(codename="view_product")
+        )
+        self.client.force_authenticate(user=self.user)
+        mock_chat.return_value = "Có 1 sản phẩm đang được quản lý."
+        history = [
+            {"role": "user" if index % 2 == 0 else "assistant", "content": f"Message {index}"}
+            for index in range(12)
+        ]
+
+        response = self.client.post(
+            "/api/ai/chat/",
+            {"message": "Có bao nhiêu sản phẩm?", "history": history},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["reply"], "Có 1 sản phẩm đang được quản lý.")
+        self.assertEqual(response.data["model"], "gpt-chat-test")
+        call_kwargs = mock_chat.call_args.kwargs
+        self.assertEqual(len(call_kwargs["messages"]), 11)
+        self.assertEqual(call_kwargs["messages"][0]["content"], "Message 2")
+        self.assertIn('"products"', call_kwargs["instructions"])
+        self.assertNotIn('"warehouses"', call_kwargs["instructions"])
+
+    def test_chat_validates_empty_message(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post("/api/ai/chat/", {"message": "   "}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

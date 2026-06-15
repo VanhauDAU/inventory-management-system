@@ -44,6 +44,7 @@ Hệ thống quản lý sản phẩm và tồn kho được xây dựng theo mô
 - Báo cáo giá trị tồn kho theo sản phẩm, danh mục, nhà cung cấp và kho.
 - Gợi ý nhập hàng dựa trên ngưỡng tồn kho và tốc độ xuất trong 30 ngày gần nhất.
 - Tùy chọn dùng OpenAI API để bổ sung phân tích; hệ thống tự chuyển về thuật toán rule-based nếu không cấu hình API key hoặc khi API gặp lỗi.
+- Chatbot ProductMS hỗ trợ hỏi đáp về sản phẩm, tồn kho và giao dịch theo quyền của người dùng.
 
 ### Giao diện
 
@@ -161,6 +162,7 @@ POSTGRES_HOST_PORT=5432
 
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.2
+OPENAI_CHAT_MODEL=gpt-5.2
 ```
 
 `POSTGRES_HOST=db` là hostname dùng bên trong Docker Compose. Không commit file `.env` chứa thông tin thật.
@@ -344,6 +346,7 @@ POST /api/token/refresh/
 | Chi tiết phiếu kho | `/api/stock-transaction-items/` |
 | Báo cáo | `/api/reports/` |
 | Gợi ý nhập hàng | `GET /api/ai/inventory-advice/` |
+| Chatbot | `POST /api/ai/chat/` |
 | OpenAPI schema | `GET /api/schema/` |
 
 Các resource dùng router hỗ trợ thao tác REST tiêu chuẩn tùy theo quyền:

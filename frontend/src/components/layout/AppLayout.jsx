@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ChatbotWidget from '../chat/ChatbotWidget'
 import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import './AppLayout.css'
@@ -41,6 +42,7 @@ export default function AppLayout({ activePage, onNavigate, isDemoMode, apiUrl, 
           {children}
         </main>
       </div>
+      <ChatbotWidget currentUser={currentUser} />
     </div>
   )
 }
