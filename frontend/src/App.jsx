@@ -7,6 +7,8 @@ import SupplierPage from './pages/suppliers/SupplierPage'
 import WarehousePage from './pages/warehouses/WarehousePage'
 import StockTransactionPage from './pages/stock-transactions/StockTransactionPage'
 import InventoryOverviewPage from './pages/reports/InventoryOverviewPage'
+import InventoryValueReportPage from './pages/reports/InventoryValueReportPage'
+import LowStockReportPage from './pages/reports/LowStockReportPage'
 import UserManagementPage from './pages/system/UserManagementPage'
 import RoleManagementPage from './pages/system/RoleManagementPage'
 import PlaceholderPage from './components/common/PlaceholderPage'
@@ -101,10 +103,10 @@ function renderPage(pageKey, { onNavigate, stats, onStatsChange, onLogout, curre
       return <InventoryOverviewPage onNavigate={onNavigate} />
 
     case 'report-low-stock':
-      return <PlaceholderPage title="Sản phẩm sắp hết hàng" description="Danh sách các sản phẩm có số lượng tồn kho thấp cần nhập thêm." icon="⚠️" />
+      return <LowStockReportPage onNavigate={onNavigate} />
 
     case 'report-value':
-      return <PlaceholderPage title="Giá trị tồn kho" description="Báo cáo giá trị tổng tồn kho theo danh mục và thời gian." icon="💰" />
+      return <InventoryValueReportPage />
 
     case 'system-users':
       return <UserManagementPage />

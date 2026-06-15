@@ -145,6 +145,11 @@ class InventoryAPITests(APITestCase):
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.quantity, 15)
+        warehouse_stock = WarehouseStock.objects.get(
+            warehouse=self.warehouse,
+            product=self.product,
+        )
+        self.assertEqual(warehouse_stock.quantity, 5)
 
     def test_stock_transaction_rejects_inactive_product(self):
         self.client.force_authenticate(user=self.user)
@@ -208,6 +213,11 @@ class InventoryAPITests(APITestCase):
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.quantity, 6)
+        warehouse_stock = WarehouseStock.objects.get(
+            warehouse=self.warehouse,
+            product=self.product,
+        )
+        self.assertEqual(warehouse_stock.quantity, 6)
 
     def test_export_transaction_rejects_insufficient_stock(self):
         self.client.force_authenticate(user=self.user)
@@ -233,6 +243,86 @@ class InventoryAPITests(APITestCase):
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.quantity, 10)
+        self.assertFalse(
+            StockTransaction.objects.filter(transaction_code="EXPORT-TOO-MUCH").exists()
+        )
+
+    def test_authenticated_user_can_create_adjustment_transaction(self):
+        self.client.force_authenticate(user=self.user)
+        WarehouseStock.objects.create(
+            warehouse=self.warehouse,
+            product=self.product,
+            quantity=10,
+        )
+
+        response = self.client.post(
+            "/api/stock-transactions/",
+            {
+                "warehouse": self.warehouse.id,
+                "transaction_type": StockTransaction.TransactionType.ADJUSTMENT,
+                "transaction_code": "ADJUST-001",
+                "reason": "Cycle count",
+                "items": [
+                    {
+                        "product": self.product.id,
+                        "quantity": 7,
+                        "unit_price": "40.00",
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.quantity, 7)
+        warehouse_stock = WarehouseStock.objects.get(
+            warehouse=self.warehouse,
+            product=self.product,
+        )
+        self.assertEqual(warehouse_stock.quantity, 7)
+
+    def test_stock_transaction_rejects_inactive_warehouse(self):
+        self.client.force_authenticate(user=self.user)
+        inactive_warehouse = Warehouse.objects.create(
+            name="Inactive Warehouse",
+            is_active=False,
+        )
+
+        response = self.client.post(
+            "/api/stock-transactions/",
+            {
+                "warehouse": inactive_warehouse.id,
+                "transaction_type": StockTransaction.TransactionType.IMPORT,
+                "transaction_code": "IMPORT-INACTIVE-WAREHOUSE",
+                "items": [
+                    {
+                        "product": self.product.id,
+                        "quantity": 5,
+                        "unit_price": "40.00",
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("warehouse", response.data)
+
+    def test_stock_transaction_delete_is_blocked_to_keep_inventory_history(self):
+        self.client.force_authenticate(user=self.user)
+        stock_transaction = StockTransaction.objects.create(
+            warehouse=self.warehouse,
+            transaction_type=StockTransaction.TransactionType.IMPORT,
+            transaction_code="IMPORT-AUDIT",
+            created_by=self.user,
+        )
+
+        response = self.client.delete(f"/api/stock-transactions/{stock_transaction.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertTrue(StockTransaction.objects.filter(id=stock_transaction.id).exists())
 
     def test_authenticated_user_can_list_stock_transaction_items(self):
         self.client.force_authenticate(user=self.user)

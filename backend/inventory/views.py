@@ -204,7 +204,13 @@ class WarehouseStockViewSet(viewsets.ReadOnlyModelViewSet):
     destroy=extend_schema(
         tags=["Stock Transactions"],
         summary="Delete stock transaction",
-        description="Delete a stock transaction record. Use with care because stock changes are applied at creation time.",
+        description=(
+            "Stock transactions cannot be deleted after creation because stock changes "
+            "are applied immediately and the record is part of the inventory audit trail."
+        ),
+        responses={
+            405: OpenApiResponse(description="Stock transactions are immutable audit records."),
+        },
     ),
 )
 class StockTransactionViewSet(viewsets.ModelViewSet):
@@ -220,6 +226,17 @@ class StockTransactionViewSet(viewsets.ModelViewSet):
     filterset_fields = ["warehouse", "transaction_type", "created_by"]
     search_fields = ["transaction_code", "reason", "note"]
     ordering_fields = ["id", "transaction_code", "transaction_type", "created_at", "updated_at"]
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": (
+                    "Không thể xóa phiếu kho vì phiếu đã được dùng làm lịch sử kiểm kê "
+                    "và số lượng tồn đã được áp dụng khi tạo phiếu."
+                )
+            },
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
 
 @extend_schema_view(

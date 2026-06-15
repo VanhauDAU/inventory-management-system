@@ -143,6 +143,11 @@ class StockTransactionSerializer(serializers.ModelSerializer):
         )
         items = attrs.get("items", [])
 
+        if warehouse and not warehouse.is_active:
+            raise serializers.ValidationError(
+                {"warehouse": "Cannot create stock transactions for an inactive warehouse."}
+            )
+
         if transaction_type == StockTransaction.TransactionType.EXPORT:
             for item in items:
                 product = item["product"]
@@ -172,6 +177,15 @@ class StockTransactionSerializer(serializers.ModelSerializer):
             validated_data["created_by"] = request.user
 
         with transaction.atomic():
+            product_ids = [item["product"].id for item in items_data]
+            list(Product.objects.select_for_update().filter(id__in=product_ids))
+            list(
+                WarehouseStock.objects.select_for_update().filter(
+                    warehouse=validated_data["warehouse"],
+                    product_id__in=product_ids,
+                )
+            )
+
             stock_transaction = StockTransaction.objects.create(**validated_data)
 
             for item_data in items_data:
@@ -218,6 +232,16 @@ class StockTransactionSerializer(serializers.ModelSerializer):
             previous_quantity = warehouse_stock.quantity
             warehouse_stock.quantity = item.quantity
             product.quantity += item.quantity - previous_quantity
+
+        if product.quantity < 0:
+            raise serializers.ValidationError(
+                {
+                    "items": (
+                        f"Product {product.sku} stock cannot become negative after "
+                        "this transaction."
+                    )
+                }
+            )
 
         warehouse_stock.save(update_fields=["quantity", "updated_at"])
         product.save(update_fields=["quantity", "updated_at"])

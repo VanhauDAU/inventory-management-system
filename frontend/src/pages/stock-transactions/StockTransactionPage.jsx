@@ -66,6 +66,13 @@ const formatDateTime = (value) => {
   }).format(new Date(value))
 }
 
+const formatDateInput = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const formatLongDateTime = (value) => {
   const date = value ? new Date(value) : new Date()
   return new Intl.DateTimeFormat('vi-VN', {
@@ -101,6 +108,30 @@ function getTransactionTotals(transaction) {
     quantity: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
     amount: items.reduce((sum, item) => sum + Number(item.total_amount || 0), 0),
   }
+}
+
+function buildQueryString(params) {
+  const query = new URLSearchParams()
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') query.set(key, value)
+  })
+  return query.toString()
+}
+
+function downloadTextFile(filename, content, mimeType = 'text/plain;charset=utf-8') {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
+function csvCell(value) {
+  return `"${String(value ?? '').replace(/"/g, '""')}"`
 }
 
 function buildVoucherHtml(transaction) {
@@ -538,6 +569,17 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
   const [toast, setToast] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [historySearch, setHistorySearch] = useState('')
+  const [historyFilters, setHistoryFilters] = useState(() => {
+    const today = new Date()
+    const thirtyDaysAgo = new Date(today)
+    thirtyDaysAgo.setDate(today.getDate() - 30)
+    return {
+      date_from: formatDateInput(thirtyDaysAgo),
+      date_to: formatDateInput(today),
+      warehouse: '',
+      transaction_type: '',
+    }
+  })
   const [productSearch, setProductSearch] = useState('')
   const [selectedTransaction, setSelectedTransaction] = useState(null)
 
@@ -568,8 +610,9 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
       setLoading(true)
       setError('')
       try {
+        const reportQuery = buildQueryString(historyFilters)
         const transactionPath = transactionType === 'all'
-          ? '/stock-transactions/?ordering=-created_at'
+          ? `/reports/inventory/transactions/${reportQuery ? `?${reportQuery}` : ''}`
           : `/stock-transactions/?transaction_type=${transactionType}&ordering=-created_at`
         const [warehouseList, productList, transactionList] = await Promise.all([
           fetchAllPages('/warehouses/', controller.signal),
@@ -597,7 +640,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
 
     loadData()
     return () => controller.abort()
-  }, [isFormMode, refreshKey, selectedWarehouse, transactionType])
+  }, [historyFilters, isFormMode, refreshKey, selectedWarehouse, transactionType])
 
   useEffect(() => {
     if (!selectedWarehouse) {
@@ -701,6 +744,49 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
     })
   }, [historySearch, transactions])
 
+  const historyStats = useMemo(() => {
+    return filteredTransactions.reduce((stats, transaction) => {
+      const transactionTotals = getTransactionTotals(transaction)
+      stats.total += 1
+      stats.quantity += transactionTotals.quantity
+      stats.amount += transactionTotals.amount
+      stats[transaction.transaction_type] = (stats[transaction.transaction_type] || 0) + 1
+      return stats
+    }, {
+      total: 0,
+      quantity: 0,
+      amount: 0,
+      import: 0,
+      export: 0,
+      adjustment: 0,
+    })
+  }, [filteredTransactions])
+
+  const topHistoryProducts = useMemo(() => {
+    const productStats = new Map()
+
+    filteredTransactions.forEach((transaction) => {
+      ;(transaction.items || []).forEach((item) => {
+        const product = item.product_detail || {}
+        const key = String(item.product)
+        const current = productStats.get(key) || {
+          id: key,
+          name: product.name || `Sản phẩm #${item.product}`,
+          sku: product.sku || `#${item.product}`,
+          quantity: 0,
+          amount: 0,
+        }
+        current.quantity += Number(item.quantity || 0)
+        current.amount += Number(item.total_amount || 0)
+        productStats.set(key, current)
+      })
+    })
+
+    return Array.from(productStats.values())
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5)
+  }, [filteredTransactions])
+
   const quantityLabel = isAdjustment ? 'SL thực tế' : 'Số lượng'
   const selectedPanelTitle = isAdjustment ? 'Kiểm kê hiện tại' : 'Phiếu hiện tại'
   const selectedEmptyText = isAdjustment
@@ -714,6 +800,57 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
     export: 'Xuất bán / xuất dùng',
     adjustment: 'Kiểm kê kho / điều chỉnh chênh lệch',
   }[transactionType] || 'Lý do lập phiếu'
+
+  function updateHistoryFilter(field, value) {
+    setHistoryFilters((current) => ({ ...current, [field]: value }))
+  }
+
+  function clearHistoryFilters() {
+    setHistorySearch('')
+    setHistoryFilters({
+      date_from: '',
+      date_to: '',
+      warehouse: '',
+      transaction_type: '',
+    })
+  }
+
+  function exportHistoryCsv() {
+    if (filteredTransactions.length === 0) {
+      showToast('error', 'Không có dữ liệu giao dịch để xuất CSV.')
+      return
+    }
+
+    const headers = [
+      'Mã phiếu',
+      'Loại phiếu',
+      'Kho',
+      'Số dòng hàng',
+      'Tổng số lượng',
+      'Tổng giá trị',
+      'Người tạo',
+      'Thời gian',
+      'Lý do',
+    ]
+    const rows = filteredTransactions.map((transaction) => {
+      const transactionTotals = getTransactionTotals(transaction)
+      return [
+        transaction.transaction_code,
+        typeLabelMap[transaction.transaction_type] || transaction.transaction_type,
+        transaction.warehouse_detail?.name || `Kho #${transaction.warehouse}`,
+        (transaction.items || []).length,
+        transactionTotals.quantity,
+        transactionTotals.amount,
+        transaction.created_by_username || 'Hệ thống',
+        formatDateTime(transaction.created_at),
+        transaction.reason || '',
+      ].map(csvCell).join(',')
+    })
+
+    const csv = ['\uFEFF' + headers.map(csvCell).join(','), ...rows].join('\n')
+    downloadTextFile(`lich-su-giao-dich-kho-${formatDateInput(new Date())}.csv`, csv, 'text/csv;charset=utf-8')
+    showToast('success', 'Đã xuất CSV lịch sử giao dịch kho.')
+  }
 
   function resetForm() {
     setTransactionCode(createTransactionCode(transactionType))
@@ -892,10 +1029,21 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
           <h2>{meta.title}</h2>
           <p>{meta.description}</p>
         </div>
-        <div className="stock-header-stats">
-          <article><span>Phiếu</span><strong>{transactions.length}</strong></article>
-          <article><span>Sản phẩm</span><strong>{products.length}</strong></article>
-          <article><span>Kho</span><strong>{activeWarehouses.length}</strong></article>
+        <div className={`stock-header-stats${!isFormMode ? ' history' : ''}`}>
+          {isFormMode ? (
+            <>
+              <article><span>Phiếu</span><strong>{transactions.length}</strong></article>
+              <article><span>Sản phẩm</span><strong>{products.length}</strong></article>
+              <article><span>Kho</span><strong>{activeWarehouses.length}</strong></article>
+            </>
+          ) : (
+            <>
+              <article><span>Tổng phiếu</span><strong>{historyStats.total}</strong></article>
+              <article><span>Nhập / Xuất</span><strong>{historyStats.import}/{historyStats.export}</strong></article>
+              <article><span>SL giao dịch</span><strong>{historyStats.quantity}</strong></article>
+              <article><span>Giá trị</span><strong>{formatCurrency(historyStats.amount)}</strong></article>
+            </>
+          )}
         </div>
       </section>
 
@@ -1078,12 +1226,83 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
       )}
 
       <section className="stock-history-card">
-        <div className="stock-card-head">
-          <span>Lịch sử phiếu kho</span>
-          <label className="stock-search">
-            <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Tìm mã phiếu, kho, sản phẩm" />
-          </label>
-        </div>
+        {isFormMode ? (
+          <div className="stock-card-head">
+            <span>Lịch sử phiếu kho</span>
+            <label className="stock-search">
+              <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Tìm mã phiếu, kho, sản phẩm" />
+            </label>
+          </div>
+        ) : (
+          <div className="stock-history-dashboard">
+            <div className="stock-history-toolbar">
+              <div>
+                <span className="stock-eyebrow">Báo cáo nâng cao</span>
+                <h3>Lịch sử giao dịch kho</h3>
+                <p>Lọc theo thời gian, kho, loại phiếu; xem nhanh giá trị và xuất dữ liệu để đối soát.</p>
+              </div>
+              <div className="stock-history-actions">
+                <button type="button" className="stock-btn secondary" onClick={clearHistoryFilters}>Xóa lọc</button>
+                <button type="button" className="stock-btn secondary" onClick={() => setRefreshKey((value) => value + 1)} disabled={loading}>Làm mới</button>
+                <button type="button" className="stock-btn primary" onClick={exportHistoryCsv} disabled={loading || filteredTransactions.length === 0}>Xuất CSV</button>
+              </div>
+            </div>
+
+            <div className="stock-advanced-filters">
+              <label className="stock-field">
+                <span>Từ ngày</span>
+                <input type="date" value={historyFilters.date_from} onChange={(event) => updateHistoryFilter('date_from', event.target.value)} />
+              </label>
+              <label className="stock-field">
+                <span>Đến ngày</span>
+                <input type="date" value={historyFilters.date_to} onChange={(event) => updateHistoryFilter('date_to', event.target.value)} />
+              </label>
+              <label className="stock-field">
+                <span>Kho</span>
+                <select value={historyFilters.warehouse} onChange={(event) => updateHistoryFilter('warehouse', event.target.value)}>
+                  <option value="">Tất cả kho</option>
+                  {warehouses.map((warehouse) => (
+                    <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="stock-field">
+                <span>Loại phiếu</span>
+                <select value={historyFilters.transaction_type} onChange={(event) => updateHistoryFilter('transaction_type', event.target.value)}>
+                  <option value="">Tất cả loại phiếu</option>
+                  <option value="import">Nhập kho</option>
+                  <option value="export">Xuất kho</option>
+                  <option value="adjustment">Điều chỉnh</option>
+                </select>
+              </label>
+              <label className="stock-field stock-filter-search">
+                <span>Tìm kiếm</span>
+                <input value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Mã phiếu, kho, sản phẩm, lý do" />
+              </label>
+            </div>
+
+            <div className="stock-insight-grid">
+              <article className="import"><span>Phiếu nhập</span><strong>{historyStats.import}</strong></article>
+              <article className="export"><span>Phiếu xuất</span><strong>{historyStats.export}</strong></article>
+              <article className="adjustment"><span>Điều chỉnh</span><strong>{historyStats.adjustment}</strong></article>
+              <article><span>Dòng hàng</span><strong>{filteredTransactions.reduce((sum, transaction) => sum + (transaction.items || []).length, 0)}</strong></article>
+            </div>
+
+            {topHistoryProducts.length > 0 && (
+              <div className="stock-top-products">
+                <span>Sản phẩm nổi bật theo giá trị giao dịch</span>
+                <div>
+                  {topHistoryProducts.map((product) => (
+                    <button key={product.id} type="button" onClick={() => setHistorySearch(product.sku)}>
+                      <strong>{product.name}</strong>
+                      <small>{product.sku} · {product.quantity} SP · {formatCurrency(product.amount)}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="stock-state">Đang tải giao dịch kho...</div>
