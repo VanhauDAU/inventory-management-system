@@ -9,6 +9,7 @@ if [ "$DB_ENGINE" = "postgres" ] || [ "$DB_ENGINE" = "postgresql" ]; then
 fi
 
 python manage.py migrate
+python manage.py ensure_superuser
 python manage.py collectstatic --noinput
 
 exec gunicorn product_management.wsgi:application \

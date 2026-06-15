@@ -1,10 +1,57 @@
+from io import StringIO
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.core.management import call_command
+from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 
 User = get_user_model()
+
+
+class EnsureSuperuserCommandTests(TestCase):
+    @patch.dict(
+        "os.environ",
+        {
+            "DJANGO_SUPERUSER_USERNAME": "render-admin",
+            "DJANGO_SUPERUSER_EMAIL": "admin@example.com",
+            "DJANGO_SUPERUSER_PASSWORD": "initial-password",
+        },
+        clear=False,
+    )
+    def test_creates_superuser_from_environment(self):
+        call_command("ensure_superuser", stdout=StringIO())
+
+        user = User.objects.get(username="render-admin")
+        self.assertTrue(user.is_staff)
+        self.assertTrue(user.is_superuser)
+        self.assertEqual(user.email, "admin@example.com")
+        self.assertTrue(user.check_password("initial-password"))
+
+    def test_existing_superuser_password_is_not_reset(self):
+        user = User.objects.create_superuser(
+            username="render-admin",
+            email="old@example.com",
+            password="existing-password",
+        )
+
+        with patch.dict(
+            "os.environ",
+            {
+                "DJANGO_SUPERUSER_USERNAME": "render-admin",
+                "DJANGO_SUPERUSER_EMAIL": "new@example.com",
+                "DJANGO_SUPERUSER_PASSWORD": "different-password",
+            },
+            clear=False,
+        ):
+            call_command("ensure_superuser", stdout=StringIO())
+
+        user.refresh_from_db()
+        self.assertEqual(user.email, "new@example.com")
+        self.assertTrue(user.check_password("existing-password"))
 
 
 class AccountAdminApiTests(APITestCase):

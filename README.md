@@ -151,6 +151,9 @@ DJANGO_SECRET_KEY=replace-with-a-secret-key
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+DJANGO_SUPERUSER_USERNAME=
+DJANGO_SUPERUSER_EMAIL=
+DJANGO_SUPERUSER_PASSWORD=
 
 DB_ENGINE=postgres
 POSTGRES_DB=product_management
@@ -174,6 +177,8 @@ docker compose up --build -d
 ```
 
 Backend tự chờ PostgreSQL sẵn sàng và chạy migration khi container khởi động.
+Nếu các biến `DJANGO_SUPERUSER_*` được cấu hình, backend cũng tự tạo tài
+khoản quản trị trong lần khởi động đầu tiên.
 
 Kiểm tra trạng thái và log:
 
