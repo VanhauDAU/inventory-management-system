@@ -35,6 +35,10 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+render_external_hostname = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if render_external_hostname and render_external_hostname not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(render_external_hostname)
+
 CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
