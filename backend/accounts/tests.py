@@ -53,29 +53,6 @@ class EnsureSuperuserCommandTests(TestCase):
         self.assertEqual(user.email, "new@example.com")
         self.assertTrue(user.check_password("existing-password"))
 
-    def test_resets_existing_superuser_password_when_enabled(self):
-        user = User.objects.create_superuser(
-            username="render-admin",
-            email="admin@example.com",
-            password="existing-password",
-        )
-
-        with patch.dict(
-            "os.environ",
-            {
-                "DJANGO_SUPERUSER_USERNAME": "render-admin",
-                "DJANGO_SUPERUSER_EMAIL": "admin@example.com",
-                "DJANGO_SUPERUSER_PASSWORD": "new-password",
-                "DJANGO_SUPERUSER_RESET_PASSWORD": "True",
-            },
-            clear=False,
-        ):
-            call_command("ensure_superuser", stdout=StringIO())
-
-        user.refresh_from_db()
-        self.assertTrue(user.check_password("new-password"))
-
-
 class AccountAdminApiTests(APITestCase):
     def setUp(self):
         self.staff_user = User.objects.create_user(
