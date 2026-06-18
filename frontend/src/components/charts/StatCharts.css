@@ -1,0 +1,270 @@
+.chart-card {
+  min-width: 0;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.95rem;
+}
+
+.chart-head span {
+  display: block;
+  color: #2563eb;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.chart-head h3 {
+  margin-top: 0.1rem;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.chart-head p {
+  max-width: 520px;
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.chart-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.donut-layout {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.donut-wrap {
+  position: relative;
+  width: 148px;
+  height: 148px;
+}
+
+.donut-svg {
+  width: 148px;
+  height: 148px;
+  transform: rotate(-90deg);
+}
+
+.donut-track,
+.donut-segment {
+  fill: none;
+  stroke-width: 5.5;
+}
+
+.donut-track {
+  stroke: #e2e8f0;
+}
+
+.donut-segment {
+  transition: stroke-dasharray 0.2s ease;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 1rem;
+  text-align: center;
+}
+
+.donut-center strong {
+  display: block;
+  max-width: 104px;
+  color: #0f172a;
+  font-size: 1.15rem;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.donut-center span {
+  display: block;
+  margin-top: 0.25rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.chart-legend div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.chart-legend span,
+.chart-legend b {
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.chart-legend span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-legend b {
+  color: #0f172a;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem 0.75rem;
+  align-items: center;
+}
+
+.bar-row strong,
+.compare-row strong {
+  display: block;
+  min-width: 0;
+  color: #0f172a;
+  font-size: 0.84rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-row span {
+  display: block;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bar-row b,
+.compare-row b {
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bar-row > i,
+.bar-row > i em,
+.compare-row i,
+.compare-row em {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.bar-row > i,
+.compare-row i {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.compare-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.compare-labels,
+.compare-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.compare-labels {
+  padding-left: calc(140px + 0.75rem);
+  display: none;
+}
+
+.compare-labels span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.compare-row > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.compare-row div:first-of-type em {
+  background: #0f766e;
+}
+
+.compare-row div:last-of-type em {
+  background: #2563eb;
+}
+
+@media (max-width: 760px) {
+  .donut-layout,
+  .compare-row {
+    grid-template-columns: 1fr;
+  }
+
+  .donut-wrap {
+    margin: 0 auto;
+  }
+
+  .compare-row > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .compare-row b {
+    text-align: left;
+  }
+}

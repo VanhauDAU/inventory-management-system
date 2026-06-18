@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
-import api from '../../services/api'
+import { useMemo, useState } from 'react'
+import { ComparisonBarChart, DonutChart, HorizontalBarChart } from '../../components/charts'
+import MetricCard from '../../components/common/MetricCard'
+import useInventoryValueReport from '../../hooks/useInventoryValueReport'
+import { formatCurrency, formatNumber } from '../../utils/formatters'
+import { buildInventoryValueView } from '../../utils/reportTransforms'
 import './InventoryValueReportPage.css'
 
 const tabs = [
@@ -7,16 +11,6 @@ const tabs = [
   { key: 'by_supplier', label: 'Nhà cung cấp' },
   { key: 'by_warehouse', label: 'Kho' },
 ]
-
-const formatNumber = (value) =>
-  new Intl.NumberFormat('vi-VN').format(Number(value || 0))
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
 
 function Icon({ name }) {
   const common = {
@@ -67,41 +61,12 @@ function Icon({ name }) {
 }
 
 export default function InventoryValueReportPage() {
-  const [report, setReport] = useState(null)
   const [activeTab, setActiveTab] = useState('by_category')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { error, loading, loadReport, report } = useInventoryValueReport()
 
-  async function loadReport(signal) {
-    setLoading(true)
-    setError('')
-
-    try {
-      const response = await api.get('/reports/inventory/value/', { signal })
-      setReport(response.data)
-    } catch (err) {
-      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return
-      const detail = err.response?.data?.detail
-      setError(detail || 'Không thể tải báo cáo giá trị tồn kho.')
-      setReport(null)
-    } finally {
-      if (!signal?.aborted) setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    const controller = new AbortController()
-    loadReport(controller.signal)
-    return () => controller.abort()
-  }, [])
-
-  const rows = useMemo(() => report?.[activeTab] || [], [activeTab, report])
-  const maxCostValue = useMemo(
-    () => Math.max(...rows.map((row) => Number(row.total_cost_value || 0)), 0),
-    [rows],
-  )
-
-  const grossMarginValue = Number(report?.total_selling_value || 0) - Number(report?.total_cost_value || 0)
+  const valueView = useMemo(() => buildInventoryValueView(report, activeTab), [activeTab, report])
+  const activeTabLabel = tabs.find((tab) => tab.key === activeTab)?.label || 'Nhóm'
+  const { chartRows, comparisonRows, grossMarginValue, maxCostValue, rows, valueMix } = valueView
 
   return (
     <div className="inventory-value-page">
@@ -120,34 +85,38 @@ export default function InventoryValueReportPage() {
       {error && <div className="iv-notice error">{error}</div>}
 
       <section className="iv-card-grid">
-        <article className="iv-card tone-blue">
-          <span><Icon name="package" /></span>
-          <div>
-            <small>Tổng sản phẩm</small>
-            <strong>{loading ? '...' : formatNumber(report?.products_count)}</strong>
-          </div>
-        </article>
-        <article className="iv-card tone-teal">
-          <span><Icon name="warehouse" /></span>
-          <div>
-            <small>Tổng tồn kho</small>
-            <strong>{loading ? '...' : formatNumber(report?.total_quantity)}</strong>
-          </div>
-        </article>
-        <article className="iv-card tone-green">
-          <span><Icon name="wallet" /></span>
-          <div>
-            <small>Giá trị vốn</small>
-            <strong>{loading ? '...' : formatCurrency(report?.total_cost_value)}</strong>
-          </div>
-        </article>
-        <article className="iv-card tone-indigo">
-          <span><Icon name="wallet" /></span>
-          <div>
-            <small>Giá trị bán</small>
-            <strong>{loading ? '...' : formatCurrency(report?.total_selling_value)}</strong>
-          </div>
-        </article>
+        <MetricCard icon={<Icon name="package" />} label="Tổng sản phẩm" value={formatNumber(report?.products_count)} tone="blue" loading={loading} />
+        <MetricCard icon={<Icon name="warehouse" />} label="Tổng tồn kho" value={formatNumber(report?.total_quantity)} tone="teal" loading={loading} />
+        <MetricCard icon={<Icon name="wallet" />} label="Giá trị vốn" value={formatCurrency(report?.total_cost_value)} tone="green" loading={loading} />
+        <MetricCard icon={<Icon name="wallet" />} label="Giá trị bán" value={formatCurrency(report?.total_selling_value)} tone="indigo" loading={loading} />
+      </section>
+
+      <section className="iv-chart-grid">
+        <DonutChart
+          eyebrow="Biên giá trị"
+          title="Vốn và chênh lệch bán"
+          subtitle="Tỷ lệ giữa giá trị vốn tồn kho và phần chênh lệch theo giá bán."
+          data={valueMix}
+          totalLabel="Giá bán"
+          totalValue={report?.total_selling_value}
+          valueFormatter={formatCurrency}
+        />
+        <HorizontalBarChart
+          eyebrow={activeTabLabel}
+          title="Tỷ trọng giá trị vốn"
+          subtitle="Top nhóm có giá trị vốn tồn kho lớn nhất trong tab đang chọn."
+          data={chartRows}
+          valueFormatter={formatCurrency}
+        />
+        <ComparisonBarChart
+          eyebrow={activeTabLabel}
+          title="So sánh vốn và giá bán"
+          subtitle="Đối chiếu hai lớp giá trị để nhìn nhanh biên chênh lệch theo nhóm."
+          data={comparisonRows}
+          leftLabel="Giá trị vốn"
+          rightLabel="Giá trị bán"
+          valueFormatter={formatCurrency}
+        />
       </section>
 
       <section className="iv-panel">

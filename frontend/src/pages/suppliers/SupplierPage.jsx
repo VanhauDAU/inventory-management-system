@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import useToast from '../../hooks/useToast'
+import { authJson, fetchPaginated } from '../../services/authApi'
+import { formatCurrency, formatDateTime } from '../../utils/formatters'
 import { hasPermission } from '../../utils/permissions'
 import './SupplierPage.css'
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 const initialForm = {
   name: '',
@@ -15,70 +16,8 @@ const initialForm = {
   is_active: true,
 }
 
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
-
-const formatDateTime = (value) => {
-  if (!value) return 'Chưa có'
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
 const getProductPrice = (product) => product?.price ?? product?.selling_price ?? 0
 const getProductImage = (product) => product?.image || '/product-images/product-default.svg'
-
-async function refreshAccessToken(signal) {
-  const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
-  if (!refreshToken) return null
-
-  const response = await fetch(`${apiUrl}/token/refresh/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh: refreshToken }),
-    signal,
-  })
-
-  if (!response.ok) return null
-
-  const data = await response.json()
-  if (!data.access) return null
-
-  localStorage.setItem('access_token', data.access)
-  localStorage.setItem('accessToken', data.access)
-  return data.access
-}
-
-async function apiJson(path, { method = 'GET', body, signal } = {}) {
-  let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
-  if (!token) throw new Error('Bạn cần đăng nhập để thực hiện thao tác này.')
-
-  const request = (accessToken) => fetch(`${apiUrl}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal,
-  })
-
-  let response = await request(token)
-  if (response.status === 401) {
-    const newToken = await refreshAccessToken(signal)
-    if (!newToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
-    response = await request(newToken)
-  }
-
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(getApiErrorMessage(data, response.status))
-  return data
-}
 
 function getApiErrorMessage(data, fallbackStatus) {
   if (data?.detail) return data.detail
@@ -103,23 +42,6 @@ function getApiErrorMessage(data, fallbackStatus) {
 
   if (firstField && rawMessage) return `${fieldMap[firstField] || firstField}: ${rawMessage}`
   return `Lỗi API: ${fallbackStatus}`
-}
-
-async function fetchPaginated(path) {
-  const allItems = []
-  let currentPage = 1
-  let hasNextPage = true
-  const separator = path.includes('?') ? '&' : '?'
-
-  while (hasNextPage) {
-    const data = await apiJson(`${path}${separator}page=${currentPage}`)
-    const list = Array.isArray(data.results) ? data.results : data
-    allItems.push(...(Array.isArray(list) ? list : []))
-    hasNextPage = Boolean(data.next)
-    currentPage += 1
-  }
-
-  return allItems
 }
 
 function SupplierForm({ form, errors, editingSupplier, onChange, onSubmit, onCancel, loading }) {
@@ -263,20 +185,8 @@ export default function SupplierPage({ currentUser }) {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
-  const [toast, setToast] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
-
-  function showToast(type, message) {
-    setToast({ id: Date.now(), type, message })
-  }
-
-  useEffect(() => {
-    if (!toast) return undefined
-    const timeoutId = window.setTimeout(() => {
-      setToast((current) => (current?.id === toast.id ? null : current))
-    }, toast.type === 'error' ? 6000 : 3500)
-    return () => window.clearTimeout(timeoutId)
-  }, [toast])
+  const { clearToast, showToast, toast } = useToast()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -285,18 +195,10 @@ export default function SupplierPage({ currentUser }) {
       setLoading(true)
       setError('')
       try {
-        const allSuppliers = []
-        let currentPage = 1
-        let hasNextPage = true
-
-        while (hasNextPage) {
-          const data = await apiJson(`/suppliers/?page=${currentPage}`, { signal: controller.signal })
-          const list = Array.isArray(data.results) ? data.results : data
-          allSuppliers.push(...(Array.isArray(list) ? list : []))
-          hasNextPage = Boolean(data.next)
-          currentPage += 1
-        }
-
+        const allSuppliers = await fetchPaginated('/suppliers/', {
+          signal: controller.signal,
+          errorResolver: getApiErrorMessage,
+        })
         setSuppliers(allSuppliers)
       } catch (requestError) {
         if (requestError.name === 'AbortError') return
@@ -439,10 +341,10 @@ export default function SupplierPage({ currentUser }) {
 
     try {
       if (editingSupplier) {
-        await apiJson(`/suppliers/${editingSupplier.id}/`, { method: 'PATCH', body: payload })
+        await authJson(`/suppliers/${editingSupplier.id}/`, { method: 'PATCH', body: payload, errorResolver: getApiErrorMessage })
         showToast('success', 'Đã cập nhật nhà phân phối thành công.')
       } else {
-        await apiJson('/suppliers/', { method: 'POST', body: payload })
+        await authJson('/suppliers/', { method: 'POST', body: payload, errorResolver: getApiErrorMessage })
         showToast('success', 'Đã thêm nhà phân phối thành công.')
       }
 
@@ -469,9 +371,9 @@ export default function SupplierPage({ currentUser }) {
     try {
       let allProducts
       try {
-        allProducts = await fetchPaginated(`/suppliers/${supplier.id}/products/`)
+        allProducts = await fetchPaginated(`/suppliers/${supplier.id}/products/`, { errorResolver: getApiErrorMessage })
       } catch {
-        allProducts = await fetchPaginated(`/products/?supplier=${supplier.id}`)
+        allProducts = await fetchPaginated(`/products/?supplier=${supplier.id}`, { errorResolver: getApiErrorMessage })
       }
       setSupplierProducts(allProducts)
     } catch (requestError) {
@@ -491,7 +393,7 @@ export default function SupplierPage({ currentUser }) {
 
     setDeleting(true)
     try {
-      await apiJson(`/suppliers/${deleteTarget.id}/`, { method: 'DELETE' })
+      await authJson(`/suppliers/${deleteTarget.id}/`, { method: 'DELETE', errorResolver: getApiErrorMessage })
       setDeleteTarget(null)
       setRefreshKey((value) => value + 1)
       showToast('success', 'Đã xóa nhà phân phối thành công.')
@@ -508,7 +410,7 @@ export default function SupplierPage({ currentUser }) {
         <div className={`supplier-toast ${toast.type}`} role="status" aria-live="polite">
           <div className="supplier-toast-icon" aria-hidden="true">{toast.type === 'success' ? '✓' : '!'}</div>
           <p>{toast.message}</p>
-          <button type="button" aria-label="Đóng thông báo" onClick={() => setToast(null)}>×</button>
+          <button type="button" aria-label="Đóng thông báo" onClick={clearToast}>×</button>
         </div>
       )}
 

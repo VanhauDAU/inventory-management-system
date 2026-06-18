@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import useToast from '../../hooks/useToast'
+import { authJson, fetchPaginated } from '../../services/authApi'
+import { formatCurrency } from '../../utils/formatters'
 import { hasPermission } from '../../utils/permissions'
 import './WarehousePage.css'
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 const initialForm = {
   name: '',
@@ -12,69 +13,7 @@ const initialForm = {
   is_active: true,
 }
 
-const formatDateTime = (value) => {
-  if (!value) return 'Chưa có'
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
 const getProductPrice = (product) => product?.price ?? product?.selling_price ?? 0
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
-
-async function refreshAccessToken(signal) {
-  const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
-  if (!refreshToken) return null
-
-  const response = await fetch(`${apiUrl}/token/refresh/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh: refreshToken }),
-    signal,
-  })
-
-  if (!response.ok) return null
-
-  const data = await response.json()
-  if (!data.access) return null
-
-  localStorage.setItem('access_token', data.access)
-  localStorage.setItem('accessToken', data.access)
-  return data.access
-}
-
-async function apiJson(path, { method = 'GET', body, signal } = {}) {
-  let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
-  if (!token) throw new Error('Bạn cần đăng nhập để thực hiện thao tác này.')
-
-  const request = (accessToken) => fetch(`${apiUrl}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal,
-  })
-
-  let response = await request(token)
-  if (response.status === 401) {
-    const newToken = await refreshAccessToken(signal)
-    if (!newToken) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
-    response = await request(newToken)
-  }
-
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(getApiErrorMessage(data, response.status))
-  return data
-}
 
 function getApiErrorMessage(data, fallbackStatus) {
   if (data?.detail) return data.detail
@@ -202,22 +141,8 @@ export default function WarehousePage({ currentUser }) {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
-  const [toast, setToast] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
-
-  function showToast(type, message) {
-    setToast({ id: Date.now(), type, message })
-  }
-
-  useEffect(() => {
-    if (!toast) return undefined
-
-    const timeoutId = window.setTimeout(() => {
-      setToast((current) => (current?.id === toast.id ? null : current))
-    }, toast.type === 'error' ? 6000 : 3500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [toast])
+  const { clearToast, showToast, toast } = useToast()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -226,18 +151,10 @@ export default function WarehousePage({ currentUser }) {
       setLoading(true)
       setError('')
       try {
-        const allWarehouses = []
-        let currentPage = 1
-        let hasNextPage = true
-
-        while (hasNextPage) {
-          const data = await apiJson(`/warehouses/?page=${currentPage}`, { signal: controller.signal })
-          const list = Array.isArray(data.results) ? data.results : data
-          allWarehouses.push(...(Array.isArray(list) ? list : []))
-          hasNextPage = Boolean(data.next)
-          currentPage += 1
-        }
-
+        const allWarehouses = await fetchPaginated('/warehouses/', {
+          signal: controller.signal,
+          errorResolver: getApiErrorMessage,
+        })
         setWarehouses(allWarehouses)
       } catch (requestError) {
         if (requestError.name === 'AbortError') return
@@ -372,15 +289,17 @@ export default function WarehousePage({ currentUser }) {
 
     try {
       if (editingWarehouse) {
-        await apiJson(`/warehouses/${editingWarehouse.id}/`, {
+        await authJson(`/warehouses/${editingWarehouse.id}/`, {
           method: 'PATCH',
           body: payload,
+          errorResolver: getApiErrorMessage,
         })
         showToast('success', 'Đã cập nhật kho thành công.')
       } else {
-        await apiJson('/warehouses/', {
+        await authJson('/warehouses/', {
           method: 'POST',
           body: payload,
+          errorResolver: getApiErrorMessage,
         })
         showToast('success', 'Đã thêm kho thành công.')
       }
@@ -401,16 +320,9 @@ export default function WarehousePage({ currentUser }) {
     setWarehouseStocks([])
     setStockLoading(true)
     try {
-      const allStocks = []
-      let currentPage = 1
-      let hasNextPage = true
-      while (hasNextPage) {
-        const data = await apiJson(`/warehouses/${warehouse.id}/stocks/?page=${currentPage}`)
-        const list = Array.isArray(data.results) ? data.results : data
-        allStocks.push(...(Array.isArray(list) ? list : []))
-        hasNextPage = Boolean(data.next)
-        currentPage += 1
-      }
+      const allStocks = await fetchPaginated(`/warehouses/${warehouse.id}/stocks/`, {
+        errorResolver: getApiErrorMessage,
+      })
       setWarehouseStocks(allStocks)
     } catch (requestError) {
       showToast('error', requestError.message || 'Không thể tải tồn kho.')
@@ -434,7 +346,7 @@ export default function WarehousePage({ currentUser }) {
 
     setDeleting(true)
     try {
-      await apiJson(`/warehouses/${deleteTarget.id}/`, { method: 'DELETE' })
+      await authJson(`/warehouses/${deleteTarget.id}/`, { method: 'DELETE', errorResolver: getApiErrorMessage })
       setDeleteTarget(null)
       setRefreshKey((value) => value + 1)
       showToast('success', 'Đã xóa kho thành công.')
@@ -451,7 +363,7 @@ export default function WarehousePage({ currentUser }) {
         <div className={`warehouse-toast ${toast.type}`} role="status" aria-live="polite">
           <div className="warehouse-toast-icon" aria-hidden="true">{toast.type === 'success' ? '✓' : '!'}</div>
           <p>{toast.message}</p>
-          <button type="button" aria-label="Đóng thông báo" onClick={() => setToast(null)}>×</button>
+          <button type="button" aria-label="Đóng thông báo" onClick={clearToast}>×</button>
         </div>
       )}
 

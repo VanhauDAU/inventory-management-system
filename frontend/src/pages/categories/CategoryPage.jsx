@@ -1,76 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import useToast from '../../hooks/useToast'
+import { authJson, fetchPaginated } from '../../services/authApi'
+import { formatDateTime } from '../../utils/formatters'
 import { hasPermission } from '../../utils/permissions'
 import './CategoryPage.css'
-
-const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 const initialForm = {
   name: '',
   description: '',
   parent: '',
   is_active: true,
-}
-
-const formatDateTime = (value) => {
-  if (!value) return 'Chưa có'
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
-async function refreshAccessToken(signal) {
-  const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
-  if (!refreshToken) return null
-
-  const response = await fetch(`${apiUrl}/token/refresh/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh: refreshToken }),
-    signal,
-  })
-
-  if (!response.ok) return null
-
-  const data = await response.json()
-  if (!data.access) return null
-
-  localStorage.setItem('access_token', data.access)
-  localStorage.setItem('accessToken', data.access)
-  return data.access
-}
-
-async function apiJson(path, { method = 'GET', body, signal } = {}) {
-  let token = localStorage.getItem('access_token') || localStorage.getItem('accessToken')
-  if (!token) throw new Error('Bạn cần đăng nhập để thực hiện thao tác này.')
-
-  const request = (accessToken) => fetch(`${apiUrl}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    signal,
-  })
-
-  let response = await request(token)
-  if (response.status === 401) {
-    const newToken = await refreshAccessToken(signal)
-    if (!newToken) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refresh_token')
-      localStorage.removeItem('refreshToken')
-      throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
-    }
-    response = await request(newToken)
-  }
-
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(getApiErrorMessage(data, response.status))
-
-  return data
 }
 
 function getApiErrorMessage(data, fallbackStatus) {
@@ -225,22 +164,8 @@ export default function CategoryPage({ currentUser }) {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(initialForm)
   const [errors, setErrors] = useState({})
-  const [toast, setToast] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
-
-  function showToast(type, message) {
-    setToast({ id: Date.now(), type, message })
-  }
-
-  useEffect(() => {
-    if (!toast) return undefined
-
-    const timeoutId = window.setTimeout(() => {
-      setToast((current) => (current?.id === toast.id ? null : current))
-    }, toast.type === 'error' ? 6000 : 3500)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [toast])
+  const { clearToast, showToast, toast } = useToast()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -249,18 +174,10 @@ export default function CategoryPage({ currentUser }) {
       setLoading(true)
       setError('')
       try {
-        const allCategories = []
-        let currentPage = 1
-        let hasNextPage = true
-
-        while (hasNextPage) {
-          const data = await apiJson(`/categories/?page=${currentPage}`, { signal: controller.signal })
-          const list = Array.isArray(data.results) ? data.results : data
-          allCategories.push(...(Array.isArray(list) ? list : []))
-          hasNextPage = Boolean(data.next)
-          currentPage += 1
-        }
-
+        const allCategories = await fetchPaginated('/categories/', {
+          signal: controller.signal,
+          errorResolver: getApiErrorMessage,
+        })
         setCategories(allCategories)
       } catch (requestError) {
         if (requestError.name === 'AbortError') return
@@ -405,15 +322,17 @@ export default function CategoryPage({ currentUser }) {
 
     try {
       if (editingCategory) {
-        await apiJson(`/categories/${editingCategory.id}/`, {
+        await authJson(`/categories/${editingCategory.id}/`, {
           method: 'PATCH',
           body: payload,
+          errorResolver: getApiErrorMessage,
         })
         showToast('success', 'Đã cập nhật danh mục thành công.')
       } else {
-        await apiJson('/categories/', {
+        await authJson('/categories/', {
           method: 'POST',
           body: payload,
+          errorResolver: getApiErrorMessage,
         })
         showToast('success', 'Đã thêm danh mục thành công.')
       }
@@ -440,7 +359,7 @@ export default function CategoryPage({ currentUser }) {
 
     setDeleting(true)
     try {
-      await apiJson(`/categories/${deleteTarget.id}/`, { method: 'DELETE' })
+      await authJson(`/categories/${deleteTarget.id}/`, { method: 'DELETE', errorResolver: getApiErrorMessage })
       setDeleteTarget(null)
       setRefreshKey((value) => value + 1)
       showToast('success', 'Đã xóa danh mục thành công.')
@@ -457,7 +376,7 @@ export default function CategoryPage({ currentUser }) {
         <div className={`category-toast ${toast.type}`} role="status" aria-live="polite">
           <div className="category-toast-icon" aria-hidden="true">{toast.type === 'success' ? '✓' : '!'}</div>
           <p>{toast.message}</p>
-          <button type="button" aria-label="Đóng thông báo" onClick={() => setToast(null)}>×</button>
+          <button type="button" aria-label="Đóng thông báo" onClick={clearToast}>×</button>
         </div>
       )}
 
