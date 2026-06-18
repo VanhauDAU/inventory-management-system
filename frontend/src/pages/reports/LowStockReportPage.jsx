@@ -1,17 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import api from '../../services/api'
+import { useMemo } from 'react'
+import { DonutChart, HorizontalBarChart } from '../../components/charts'
+import MetricCard from '../../components/common/MetricCard'
+import useLowStockReport from '../../hooks/useLowStockReport'
+import { formatCurrency, formatNumber } from '../../utils/formatters'
 import { canAccessPage } from '../../utils/permissions'
+import { buildLowStockSummary } from '../../utils/reportTransforms'
 import './LowStockReportPage.css'
-
-const formatNumber = (value) =>
-  new Intl.NumberFormat('vi-VN').format(Number(value || 0))
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0))
 
 function Icon({ name }) {
   const common = {
@@ -60,64 +54,10 @@ function Icon({ name }) {
   return <svg {...common}>{paths[name]}</svg>
 }
 
-function getEndpointFromUrl(url) {
-  if (!url) return ''
-  return url.replace(api.defaults.baseURL, '').replace(/^\/api/, '')
-}
-
 export default function LowStockReportPage({ onNavigate, currentUser }) {
-  const [items, setItems] = useState([])
-  const [count, setCount] = useState(0)
-  const [next, setNext] = useState('')
-  const [previous, setPrevious] = useState('')
-  const [currentPath, setCurrentPath] = useState('/reports/inventory/low-stock/')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { count, currentPath, error, items, loadReport, loading, next, previous } = useLowStockReport()
 
-  const loadReport = useCallback(async (path, signal) => {
-    setLoading(true)
-    setError('')
-
-    try {
-      const response = await api.get(path, { signal })
-      const data = response.data
-      const rows = Array.isArray(data) ? data : data.results || []
-
-      setItems(rows)
-      setCount(Array.isArray(data) ? rows.length : data.count || 0)
-      setNext(getEndpointFromUrl(data.next))
-      setPrevious(getEndpointFromUrl(data.previous))
-      setCurrentPath(path)
-    } catch (err) {
-      if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return
-      const detail = err.response?.data?.detail
-      setError(detail || 'Không thể tải báo cáo sản phẩm sắp hết hàng.')
-      setItems([])
-      setCount(0)
-      setNext('')
-      setPrevious('')
-    } finally {
-      if (!signal?.aborted) setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    const controller = new AbortController()
-    loadReport('/reports/inventory/low-stock/', controller.signal)
-    return () => controller.abort()
-  }, [loadReport])
-
-  const summary = useMemo(() => {
-    const totalMissing = items.reduce((sum, item) => sum + Number(item.missing_quantity || 0), 0)
-    const totalCurrent = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
-    const totalMinimum = items.reduce((sum, item) => sum + Number(item.minimum_stock || 0), 0)
-    const estimatedCost = items.reduce(
-      (sum, item) => sum + Number(item.missing_quantity || 0) * Number(item.cost_price || 0),
-      0,
-    )
-
-    return { totalMissing, totalCurrent, totalMinimum, estimatedCost }
-  }, [items])
+  const summary = useMemo(() => buildLowStockSummary(items), [items])
 
   const handleReload = () => {
     loadReport(currentPath)
@@ -152,34 +92,47 @@ export default function LowStockReportPage({ onNavigate, currentUser }) {
       {error && <div className="ls-notice error">{error}</div>}
 
       <section className="ls-card-grid">
-        <article className="ls-card tone-red">
-          <span><Icon name="alert" /></span>
-          <div>
-            <small>Sản phẩm cảnh báo</small>
-            <strong>{loading ? '...' : formatNumber(count)}</strong>
-          </div>
-        </article>
-        <article className="ls-card tone-blue">
-          <span><Icon name="package" /></span>
-          <div>
-            <small>Tồn hiện tại</small>
-            <strong>{loading ? '...' : formatNumber(summary.totalCurrent)}</strong>
-          </div>
-        </article>
-        <article className="ls-card tone-amber">
-          <span><Icon name="package" /></span>
-          <div>
-            <small>Tồn tối thiểu</small>
-            <strong>{loading ? '...' : formatNumber(summary.totalMinimum)}</strong>
-          </div>
-        </article>
-        <article className="ls-card tone-green">
-          <span><Icon name="plus" /></span>
-          <div>
-            <small>Cần bổ sung</small>
-            <strong>{loading ? '...' : formatNumber(summary.totalMissing)}</strong>
-          </div>
-        </article>
+        <MetricCard icon={<Icon name="alert" />} label="Sản phẩm cảnh báo" value={formatNumber(count)} tone="red" loading={loading} />
+        <MetricCard icon={<Icon name="package" />} label="Tồn hiện tại" value={formatNumber(summary.totalCurrent)} tone="blue" loading={loading} />
+        <MetricCard icon={<Icon name="package" />} label="Tồn tối thiểu" value={formatNumber(summary.totalMinimum)} tone="amber" loading={loading} />
+        <MetricCard icon={<Icon name="plus" />} label="Cần bổ sung" value={formatNumber(summary.totalMissing)} tone="green" loading={loading} />
+      </section>
+
+      <section className="ls-chart-grid">
+        <DonutChart
+          eyebrow="Thiếu hụt"
+          title="Tồn hiện tại và lượng cần bổ sung"
+          subtitle="So sánh số lượng đang có với phần còn thiếu để đạt ngưỡng tối thiểu."
+          data={summary.stockGapMix}
+          totalLabel="Tối thiểu"
+          totalValue={summary.totalMinimum}
+          valueFormatter={formatNumber}
+        />
+        <HorizontalBarChart
+          eyebrow="Ưu tiên"
+          title="Sản phẩm thiếu nhiều nhất"
+          subtitle="Những mặt hàng cần bổ sung số lượng lớn nhất trong danh sách hiện tại."
+          data={summary.topMissing}
+          valueFormatter={formatNumber}
+        />
+        <HorizontalBarChart
+          eyebrow="Danh mục"
+          title="Nhu cầu nhập theo nhóm"
+          subtitle="Tổng lượng cần bổ sung được gom theo danh mục sản phẩm."
+          data={summary.categoryShortage}
+          valueFormatter={formatNumber}
+        />
+        <HorizontalBarChart
+          eyebrow="Ngân sách"
+          title="Chi phí bổ sung ước tính"
+          subtitle="Các nhóm danh mục có chi phí nhập dự kiến cao nhất."
+          data={summary.categoryShortage.map((item) => ({
+            label: item.label,
+            value: item.cost,
+            note: `${formatNumber(item.value)} cần bổ sung`,
+          }))}
+          valueFormatter={formatCurrency}
+        />
       </section>
 
       <section className="ls-panel">

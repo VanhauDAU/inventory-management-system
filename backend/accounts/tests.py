@@ -53,7 +53,6 @@ class EnsureSuperuserCommandTests(TestCase):
         self.assertEqual(user.email, "new@example.com")
         self.assertTrue(user.check_password("existing-password"))
 
-
 class AccountAdminApiTests(APITestCase):
     def setUp(self):
         self.staff_user = User.objects.create_user(

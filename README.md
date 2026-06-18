@@ -57,24 +57,24 @@ Hệ thống quản lý sản phẩm và tồn kho được xây dựng theo mô
 
 ## Công nghệ sử dụng
 
-| Thành phần | Công nghệ |
-| --- | --- |
-| Frontend | React 18, React DOM, JavaScript (ES Modules), HTML5, CSS3 |
-| Công cụ frontend | Vite 5, `@vitejs/plugin-react` |
-| Gọi API | Axios |
-| Backend | Python 3.12, Django 4.2 |
-| REST API | Django REST Framework 3.16 |
-| Xác thực | Simple JWT, PyJWT |
-| Phân quyền | Django Authentication, Group, Permission và model permissions |
-| Filter API | `django-filter` |
-| API documentation | OpenAPI 3, drf-spectacular, Swagger UI, ReDoc |
-| Database | PostgreSQL 16; SQLite có thể dùng khi phát triển local |
-| Xử lý ảnh | Pillow |
-| AI Advisor | OpenAI Responses API, kết hợp thuật toán rule-based |
-| Cấu hình | `python-dotenv`, biến môi trường |
-| Container | Docker, Docker Compose |
-| CI | GitHub Actions |
-| Kiểm thử | Django test framework, DRF APIClient |
+| Thành phần        | Công nghệ                                                     |
+| ----------------- | ------------------------------------------------------------- |
+| Frontend          | React 18, React DOM, JavaScript (ES Modules), HTML5, CSS3     |
+| Công cụ frontend  | Vite 5, `@vitejs/plugin-react`                                |
+| Gọi API           | Axios                                                         |
+| Backend           | Python 3.12, Django 4.2                                       |
+| REST API          | Django REST Framework 3.16                                    |
+| Xác thực          | Simple JWT, PyJWT                                             |
+| Phân quyền        | Django Authentication, Group, Permission và model permissions |
+| Filter API        | `django-filter`                                               |
+| API documentation | OpenAPI 3, drf-spectacular, Swagger UI, ReDoc                 |
+| Database          | PostgreSQL 16; SQLite có thể dùng khi phát triển local        |
+| Xử lý ảnh         | Pillow                                                        |
+| AI Advisor        | OpenAI Responses API, kết hợp thuật toán rule-based           |
+| Cấu hình          | `python-dotenv`, biến môi trường                              |
+| Container         | Docker, Docker Compose                                        |
+| CI                | GitHub Actions                                                |
+| Kiểm thử          | Django test framework, DRF APIClient                          |
 
 ## Kiến trúc hệ thống
 
@@ -212,14 +212,14 @@ npm install axios
 
 ### 4. Truy cập ứng dụng
 
-| Dịch vụ | Địa chỉ |
-| --- | --- |
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000/api/ |
-| Django Admin | http://localhost:8000/admin/ |
-| Swagger UI | http://localhost:8000/api/docs/ |
-| ReDoc | http://localhost:8000/api/redoc/ |
-| PostgreSQL từ máy host | `localhost:5432` |
+| Dịch vụ                | Địa chỉ                          |
+| ---------------------- | -------------------------------- |
+| Frontend               | http://localhost:3000            |
+| Backend API            | http://localhost:8000/api/       |
+| Django Admin           | http://localhost:8000/admin/     |
+| Swagger UI             | http://localhost:8000/api/docs/  |
+| ReDoc                  | http://localhost:8000/api/redoc/ |
+| PostgreSQL từ máy host | `localhost:5432`                 |
 
 ### 5. Dừng dịch vụ
 
@@ -334,25 +334,25 @@ POST /api/token/refresh/
 
 ## API chính
 
-| Nhóm | Endpoint |
-| --- | --- |
-| Health check | `GET /api/health/` |
-| JWT | `POST /api/token/`, `POST /api/token/refresh/` |
-| Người dùng hiện tại | `GET /api/me/` |
-| Người dùng | `/api/users/` |
-| Vai trò | `/api/roles/` |
-| Quyền | `/api/permissions/` |
-| Danh mục | `/api/categories/` |
-| Sản phẩm | `/api/products/` |
-| Nhà cung cấp | `/api/suppliers/` |
-| Kho | `/api/warehouses/` |
-| Tồn kho theo kho | `/api/warehouse-stocks/` |
-| Phiếu kho | `/api/stock-transactions/` |
-| Chi tiết phiếu kho | `/api/stock-transaction-items/` |
-| Báo cáo | `/api/reports/` |
-| Gợi ý nhập hàng | `GET /api/ai/inventory-advice/` |
-| Chatbot | `POST /api/ai/chat/` |
-| OpenAPI schema | `GET /api/schema/` |
+| Nhóm                | Endpoint                                       |
+| ------------------- | ---------------------------------------------- |
+| Health check        | `GET /api/health/`                             |
+| JWT                 | `POST /api/token/`, `POST /api/token/refresh/` |
+| Người dùng hiện tại | `GET /api/me/`                                 |
+| Người dùng          | `/api/users/`                                  |
+| Vai trò             | `/api/roles/`                                  |
+| Quyền               | `/api/permissions/`                            |
+| Danh mục            | `/api/categories/`                             |
+| Sản phẩm            | `/api/products/`                               |
+| Nhà cung cấp        | `/api/suppliers/`                              |
+| Kho                 | `/api/warehouses/`                             |
+| Tồn kho theo kho    | `/api/warehouse-stocks/`                       |
+| Phiếu kho           | `/api/stock-transactions/`                     |
+| Chi tiết phiếu kho  | `/api/stock-transaction-items/`                |
+| Báo cáo             | `/api/reports/`                                |
+| Gợi ý nhập hàng     | `GET /api/ai/inventory-advice/`                |
+| Chatbot             | `POST /api/ai/chat/`                           |
+| OpenAPI schema      | `GET /api/schema/`                             |
 
 Các resource dùng router hỗ trợ thao tác REST tiêu chuẩn tùy theo quyền:
 

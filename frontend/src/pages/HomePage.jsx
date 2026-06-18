@@ -1,42 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
-import api from '../services/api'
+import { useEffect, useMemo } from 'react'
+import { DonutChart, HorizontalBarChart } from '../components/charts'
+import MetricCard from '../components/common/MetricCard'
+import useDashboardData from '../hooks/useDashboardData'
+import { formatCurrency, formatDateTime, formatNumber } from '../utils/formatters'
 import { canAccessPage, hasPermission } from '../utils/permissions'
+import { buildInventorySnapshot } from '../utils/reportTransforms'
 import './HomePage.css'
-
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0))
-
-const formatNumber = (value) =>
-  new Intl.NumberFormat('vi-VN').format(Number(value || 0))
-
-const formatDateTime = (value) => {
-  if (!value) return 'Chưa cập nhật'
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value))
-}
-
-const unwrapList = (data) => Array.isArray(data) ? data : data?.results || []
-
-async function fetchAllPages(path, signal) {
-  const items = []
-  let nextPath = path
-
-  while (nextPath) {
-    const response = await api.get(nextPath, { signal })
-    const data = response.data
-    items.push(...unwrapList(data))
-
-    if (!data?.next) break
-    nextPath = data.next.replace(api.defaults.baseURL, '').replace(/^\/api/, '')
-  }
-
-  return items
-}
 
 function Icon({ name }) {
   const common = {
@@ -124,113 +93,36 @@ export default function HomePage({ stats, onStatsChange, onNavigate, currentUser
   const canViewWarehouses = hasPermission(currentUser, 'inventory.view_warehouse')
   const canViewTransactions = hasPermission(currentUser, 'inventory.view_stocktransaction')
   const canViewSummary = canAccessPage(currentUser, 'report-overview')
-  const [summary, setSummary] = useState(null)
-  const [products, setProducts] = useState([])
-  const [warehouses, setWarehouses] = useState([])
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    const controller = new AbortController()
-
-    async function loadDashboard() {
-      setLoading(true)
-      setError('')
-
-      try {
-        const [summaryResponse, productList, warehouseList, transactionList] = await Promise.all([
-          canViewSummary
-            ? api.get('/reports/inventory/summary/', { signal: controller.signal })
-            : Promise.resolve({ data: null }),
-          canViewProducts
-            ? fetchAllPages('/products/?ordering=name', controller.signal)
-            : Promise.resolve([]),
-          canViewWarehouses
-            ? fetchAllPages('/warehouses/?ordering=name', controller.signal)
-            : Promise.resolve([]),
-          canViewTransactions
-            ? fetchAllPages('/stock-transactions/?ordering=-created_at', controller.signal)
-            : Promise.resolve([]),
-        ])
-
-        setSummary(summaryResponse.data)
-        setProducts(productList)
-        setWarehouses(warehouseList)
-        setTransactions(transactionList)
-
-        onStatsChange?.({
-          totalProducts: summaryResponse.data?.total_products ?? productList.length,
-          totalQuantity: summaryResponse.data?.total_quantity ?? productList.reduce((sum, product) => sum + Number(product.quantity || 0), 0),
-          lowStock: summaryResponse.data?.low_stock_products ?? productList.filter((product) => Number(product.quantity || 0) <= Number(product.minimum_stock || 0)).length,
-          totalValue: summaryResponse.data?.total_stock_value ?? productList.reduce((sum, product) => sum + Number(product.quantity || 0) * Number(product.cost_price || 0), 0),
-        })
-      } catch (err) {
-        if (err.name !== 'CanceledError' && err.code !== 'ERR_CANCELED') {
-          setError('Không thể tải dữ liệu dashboard. Vui lòng kiểm tra kết nối API hoặc đăng nhập lại.')
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false)
-      }
-    }
-
-    loadDashboard()
-    return () => controller.abort()
-  }, [canViewProducts, canViewSummary, canViewTransactions, canViewWarehouses, onStatsChange])
+  const { error, loading, products, summary, transactions, warehouses } = useDashboardData({
+    canViewProducts,
+    canViewSummary,
+    canViewTransactions,
+    canViewWarehouses,
+  })
 
   const dashboard = useMemo(() => {
-    const totalProducts = Number(summary?.total_products ?? stats?.totalProducts ?? products.length)
-    const totalQuantity = Number(summary?.total_quantity ?? stats?.totalQuantity ?? products.reduce((sum, product) => sum + Number(product.quantity || 0), 0))
-    const totalValue = Number(summary?.total_stock_value ?? stats?.totalValue ?? products.reduce((sum, product) => sum + Number(product.quantity || 0) * Number(product.cost_price || 0), 0))
-    const lowStockProducts = products
-      .filter((product) => Number(product.quantity || 0) <= Number(product.minimum_stock || 0))
-      .sort((a, b) => Number(a.quantity || 0) - Number(b.quantity || 0))
-
-    const importCount = Number(summary?.import_transactions || 0)
-    const exportCount = Number(summary?.export_transactions || 0)
-    const adjustmentCount = Number(summary?.adjustment_transactions || 0)
-    const transactionTotal = importCount + exportCount + adjustmentCount || transactions.length
-    const exportRatio = totalQuantity + exportCount > 0 ? Math.min(100, Math.round((exportCount / Math.max(transactionTotal, 1)) * 100)) : 0
-
-    const byCategory = products.reduce((map, product) => {
-      const category = product.category_detail?.name || 'Chưa phân loại'
-      const current = map.get(category) || { name: category, count: 0, quantity: 0, value: 0 }
-      current.count += 1
-      current.quantity += Number(product.quantity || 0)
-      current.value += Number(product.quantity || 0) * Number(product.cost_price || 0)
-      map.set(category, current)
-      return map
-    }, new Map())
-
-    const topCategories = Array.from(byCategory.values())
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5)
-
-    const topWarehouses = [...warehouses]
-      .sort((a, b) => Number(b.total_quantity || 0) - Number(a.total_quantity || 0))
-      .slice(0, 5)
-
-    const recentTransactions = [...transactions]
-      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-      .slice(0, 6)
-
-    return {
-      totalProducts,
-      totalQuantity,
-      totalValue,
-      lowStockProducts,
-      warehousesCount: Number(summary?.warehouses_count ?? warehouses.length),
-      importCount,
-      exportCount,
-      adjustmentCount,
-      transactionTotal,
-      exportRatio,
-      topCategories,
-      topWarehouses,
-      recentTransactions,
-      averageValue: totalProducts > 0 ? totalValue / totalProducts : 0,
-    }
+    return buildInventorySnapshot({
+      summary,
+      stats,
+      products,
+      warehouses,
+      transactions,
+      categoryLimit: 5,
+      warehouseLimit: 5,
+      transactionLimit: 6,
+      lowStockSort: 'quantity',
+    })
   }, [products, stats, summary, transactions, warehouses])
+
+  useEffect(() => {
+    if (loading) return
+    onStatsChange?.({
+      totalProducts: dashboard.totalProducts,
+      totalQuantity: dashboard.totalQuantity,
+      lowStock: dashboard.lowStockCount,
+      totalValue: dashboard.totalValue,
+    })
+  }, [dashboard.lowStockCount, dashboard.totalProducts, dashboard.totalQuantity, dashboard.totalValue, loading, onStatsChange])
 
   const statCards = [
     { visible: canViewProducts, label: 'Sản phẩm đang quản lý', value: formatNumber(dashboard.totalProducts), hint: `${formatNumber(dashboard.lowStockProducts.length)} mặt hàng cần chú ý`, icon: 'package', tone: 'blue' },
@@ -262,16 +154,68 @@ export default function HomePage({ stats, onStatsChange, onNavigate, currentUser
 
       <div className="home-stats-grid">
         {statCards.map((card) => (
-          <article className={`home-stat-card tone-${card.tone}`} key={card.label}>
-            <div className="home-stat-icon"><Icon name={card.icon} /></div>
-            <div className="home-stat-body">
-              <span>{card.label}</span>
-              <strong>{loading ? '...' : card.value}</strong>
-              <small>{card.hint}</small>
-            </div>
-          </article>
+          <MetricCard
+            key={card.label}
+            icon={<Icon name={card.icon} />}
+            label={card.label}
+            value={card.value}
+            hint={card.hint}
+            tone={card.tone}
+            loading={loading}
+          />
         ))}
       </div>
+
+      <section className="home-chart-grid">
+        {canViewProducts && (
+          <DonutChart
+            eyebrow="Sức khỏe kho"
+            title="Cơ cấu trạng thái sản phẩm"
+            subtitle="So sánh mặt hàng ổn định với nhóm dưới tồn tối thiểu."
+            data={dashboard.stockStatusMix}
+            totalLabel="Sản phẩm"
+            totalValue={dashboard.totalProducts}
+            valueFormatter={formatNumber}
+          />
+        )}
+        {canViewTransactions && (
+          <DonutChart
+            eyebrow="Luồng kho"
+            title="Cơ cấu giao dịch"
+            subtitle="Tỷ trọng phiếu nhập, xuất và điều chỉnh trong hệ thống."
+            data={dashboard.transactionMix}
+            totalLabel="Phiếu"
+            totalValue={dashboard.transactionTotal}
+            valueFormatter={formatNumber}
+          />
+        )}
+        {canViewProducts && (
+          <HorizontalBarChart
+            eyebrow="Danh mục"
+            title="Top giá trị tồn kho"
+            subtitle="Các nhóm hàng chiếm nhiều vốn tồn nhất."
+            data={dashboard.topCategories.map((category) => ({
+              label: category.name,
+              value: category.value,
+              note: `${formatNumber(category.count)} sản phẩm · ${formatNumber(category.quantity)} tồn`,
+            }))}
+            valueFormatter={formatCurrency}
+          />
+        )}
+        {canAccessPage(currentUser, 'warehouse-list') && (
+          <HorizontalBarChart
+            eyebrow="Kho hàng"
+            title="Phân bổ số lượng tồn"
+            subtitle="Các kho đang giữ nhiều hàng nhất."
+            data={dashboard.topWarehouses.map((warehouse) => ({
+              label: warehouse.name,
+              value: Number(warehouse.total_quantity || 0),
+              note: `${formatNumber(warehouse.product_kinds_count)} loại sản phẩm`,
+            }))}
+            valueFormatter={formatNumber}
+          />
+        )}
+      </section>
 
       <div className="home-dashboard-grid">
         {canViewProducts && <section className="home-panel home-panel-large">
