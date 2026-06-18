@@ -11,9 +11,6 @@ class Command(BaseCommand):
         username = os.getenv("DJANGO_SUPERUSER_USERNAME", "").strip()
         email = os.getenv("DJANGO_SUPERUSER_EMAIL", "").strip()
         password = os.getenv("DJANGO_SUPERUSER_PASSWORD", "")
-        reset_password = (
-            os.getenv("DJANGO_SUPERUSER_RESET_PASSWORD", "False").lower() == "true"
-        )
 
         if not username and not password:
             self.stdout.write("Superuser environment variables are not configured; skipping.")
