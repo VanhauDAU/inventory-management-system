@@ -11,6 +11,9 @@ class Command(BaseCommand):
         username = os.getenv("DJANGO_SUPERUSER_USERNAME", "").strip()
         email = os.getenv("DJANGO_SUPERUSER_EMAIL", "").strip()
         password = os.getenv("DJANGO_SUPERUSER_PASSWORD", "")
+        reset_password = (
+            os.getenv("DJANGO_SUPERUSER_RESET_PASSWORD", "False").lower() == "true"
+        )
 
         if not username and not password:
             self.stdout.write("Superuser environment variables are not configured; skipping.")
@@ -48,11 +51,14 @@ class Command(BaseCommand):
         if email and user.email != email:
             user.email = email
             fields_to_update.append("email")
+        if reset_password:
+            user.set_password(password)
+            fields_to_update.append("password")
 
         if fields_to_update:
             user.save(update_fields=fields_to_update)
             self.stdout.write(
-                self.style.SUCCESS(f"Updated superuser permissions for '{username}'.")
+                self.style.SUCCESS(f"Updated superuser '{username}'.")
             )
         else:
             self.stdout.write(f"Superuser '{username}' already exists; skipping.")
