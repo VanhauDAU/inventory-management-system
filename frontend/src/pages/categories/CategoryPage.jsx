@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import PaginationControls from '../../components/common/PaginationControls'
 import useToast from '../../hooks/useToast'
 import { authJson, fetchPaginated } from '../../services/authApi'
 import { formatDateTime } from '../../utils/formatters'
 import { hasPermission } from '../../utils/permissions'
+import CategoryDeleteModal from './components/CategoryDeleteModal'
+import CategoryForm from './components/CategoryForm'
+import CategoryTable from './components/CategoryTable'
+import { buildCategoryTree, flattenCategoryTree, getDescendantIds } from './categoryUtils'
 import './CategoryPage.css'
 
 const initialForm = {
@@ -34,118 +37,6 @@ function getApiErrorMessage(data, fallbackStatus) {
 
   if (firstField && rawMessage) return `${fieldMap[firstField] || firstField}: ${rawMessage}`
   return `Lỗi API: ${fallbackStatus}`
-}
-
-function buildCategoryTree(categories) {
-  const map = new Map(categories.map((category) => [category.id, { ...category, children: [] }]))
-  const roots = []
-
-  map.forEach((category) => {
-    if (category.parent && map.has(category.parent)) {
-      map.get(category.parent).children.push(category)
-    } else {
-      roots.push(category)
-    }
-  })
-
-  const sortNodes = (nodes) => {
-    nodes.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
-    nodes.forEach((node) => sortNodes(node.children))
-    return nodes
-  }
-
-  return sortNodes(roots)
-}
-
-function flattenCategoryTree(nodes, level = 0, result = []) {
-  nodes.forEach((node) => {
-    result.push({ ...node, level })
-    flattenCategoryTree(node.children, level + 1, result)
-  })
-  return result
-}
-
-function getDescendantIds(categories, categoryId) {
-  const directChildren = categories.filter((category) => category.parent === categoryId)
-  return directChildren.flatMap((child) => [child.id, ...getDescendantIds(categories, child.id)])
-}
-
-function CategoryForm({ form, errors, categories, editingCategory, onChange, onSubmit, onCancel, loading }) {
-  const blockedParentIds = editingCategory
-    ? new Set([editingCategory.id, ...getDescendantIds(categories, editingCategory.id)])
-    : new Set()
-
-  const treeOptions = flattenCategoryTree(buildCategoryTree(categories))
-
-  return (
-    <form className="category-form" onSubmit={onSubmit} noValidate>
-      <div className="category-form-grid">
-        <label className="category-field">
-          <span>Tên danh mục <b>*</b></span>
-          <input
-            name="name"
-            value={form.name}
-            onChange={onChange}
-            className={errors.name ? 'input-error' : ''}
-            placeholder="Ví dụ: Phụ kiện máy tính"
-            maxLength={100}
-          />
-          {errors.name && <small className="category-error">{errors.name}</small>}
-        </label>
-
-        <label className="category-field">
-          <span>Danh mục cha</span>
-          <select
-            name="parent"
-            value={form.parent}
-            onChange={onChange}
-            className={errors.parent ? 'input-error' : ''}
-          >
-            <option value="">Không có danh mục cha</option>
-            {treeOptions.map((category) => (
-              <option key={category.id} value={category.id} disabled={blockedParentIds.has(category.id)}>
-                {'— '.repeat(category.level)}{category.name}
-              </option>
-            ))}
-          </select>
-          {errors.parent && <small className="category-error">{errors.parent}</small>}
-        </label>
-
-        <label className="category-field category-field-wide">
-          <span>Mô tả</span>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={onChange}
-            className={errors.description ? 'input-error' : ''}
-            placeholder="Nhập mô tả ngắn cho nhóm sản phẩm"
-            rows={4}
-            maxLength={1000}
-          />
-          {errors.description && <small className="category-error">{errors.description}</small>}
-        </label>
-
-        <label className="category-toggle">
-          <input
-            name="is_active"
-            type="checkbox"
-            checked={form.is_active}
-            onChange={onChange}
-          />
-          <span>Đang sử dụng danh mục này</span>
-        </label>
-      </div>
-
-      <div className="category-form-actions">
-        <button type="button" className="category-btn secondary" onClick={onCancel} disabled={loading}>
-          Hủy
-        </button>
-        <button type="submit" className="category-btn primary" disabled={loading}>
-          {loading ? 'Đang lưu...' : editingCategory ? 'Lưu thay đổi' : 'Thêm danh mục'}
-        </button>
-      </div>
-    </form>
-  )
 }
 
 export default function CategoryPage({ currentUser }) {
@@ -449,65 +340,20 @@ export default function CategoryPage({ currentUser }) {
           <small>Không xóa được danh mục đang có sản phẩm; hãy chuyển sản phẩm hoặc tạm ẩn danh mục.</small>
         </div>
 
-        {loading ? (
-          <div className="category-state">Đang tải danh mục...</div>
-        ) : visibleCategories.length === 0 ? (
-          <div className="category-state">Không có danh mục phù hợp.</div>
-        ) : (
-          <div className="category-table-wrap">
-            <table className="category-table">
-              <thead>
-                <tr>
-                  <th>Danh mục</th>
-                  <th>Danh mục cha</th>
-                  <th>Sản phẩm</th>
-                  <th>Danh mục con</th>
-                  <th>Trạng thái</th>
-                  <th>Cập nhật</th>
-                  {canManage && <th>Thao tác</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedCategories.map((category) => (
-                  <tr key={category.id}>
-                    <td>
-                      <div className="category-name-cell" style={{ paddingLeft: `${category.level * 1.25}rem` }}>
-                        <span className="category-level-dot" />
-                        <div>
-                          <strong>{category.name}</strong>
-                          <small>{category.description || 'Chưa có mô tả'}</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{category.parent_name || 'Danh mục gốc'}</td>
-                    <td><span className="category-count">{category.products_count || 0}</span></td>
-                    <td><span className="category-count">{category.children_count || 0}</span></td>
-                    <td>
-                      <span className={`category-status ${category.is_active ? 'active' : 'inactive'}`}>
-                        {category.is_active ? 'Đang sử dụng' : 'Tạm ẩn'}
-                      </span>
-                    </td>
-                    <td>{formatDateTime(category.updated_at)}</td>
-                    {canManage && <td>
-                      <div className="category-row-actions">
-                        {canChange && <button type="button" className="category-action edit" onClick={() => openEditForm(category)}>Sửa</button>}
-                        {canDelete && <button type="button" className="category-action delete" onClick={() => setDeleteTarget(category)}>Xóa</button>}
-                      </div>
-                    </td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <PaginationControls
-              itemLabel="danh mục"
-              loading={loading}
-              onPageChange={setPage}
-              page={page}
-              pageSize={PAGE_SIZE}
-              totalCount={visibleCategories.length}
-            />
-          </div>
-        )}
+        <CategoryTable
+          canChange={canChange}
+          canDelete={canDelete}
+          canManage={canManage}
+          categories={paginatedCategories}
+          formatDateTime={formatDateTime}
+          loading={loading}
+          onDelete={setDeleteTarget}
+          onEdit={openEditForm}
+          onPageChange={setPage}
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={visibleCategories.length}
+        />
       </section>
 
       {showForm && (
@@ -535,42 +381,12 @@ export default function CategoryPage({ currentUser }) {
         </div>
       )}
 
-      {deleteTarget && (
-        <div className="category-modal-backdrop" role="presentation" onClick={() => !deleting && setDeleteTarget(null)}>
-          <section className="category-modal delete" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="category-modal-header">
-              <div>
-                <span className="category-eyebrow">Xác nhận xóa</span>
-                <h3>{deleteTarget.name}</h3>
-              </div>
-              <button type="button" aria-label="Đóng" disabled={deleting} onClick={() => setDeleteTarget(null)}>×</button>
-            </div>
-
-            {Number(deleteTarget.products_count || 0) > 0 ? (
-              <div className="category-notice error">
-                Danh mục này đang có {deleteTarget.products_count} sản phẩm nên không thể xóa.
-                Hãy chuyển các sản phẩm sang danh mục khác hoặc tắt trạng thái danh mục.
-              </div>
-            ) : (
-              <p className="category-delete-text">
-                Bạn muốn xóa danh mục này? Nếu danh mục có danh mục con, các danh mục con sẽ được chuyển về không có danh mục cha.
-              </p>
-            )}
-
-            <div className="category-delete-actions">
-              <button type="button" className="category-btn secondary" disabled={deleting} onClick={() => setDeleteTarget(null)}>Hủy</button>
-              <button
-                type="button"
-                className="category-btn danger"
-                disabled={deleting || Number(deleteTarget.products_count || 0) > 0}
-                onClick={handleDelete}
-              >
-                {deleting ? 'Đang xóa...' : 'Xóa danh mục'}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      <CategoryDeleteModal
+        category={deleteTarget}
+        deleting={deleting}
+        onClose={() => setDeleteTarget(null)}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }

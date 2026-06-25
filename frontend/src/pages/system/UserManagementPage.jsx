@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import PaginationControls from '../../components/common/PaginationControls'
 import api from '../../services/api'
 import { hasPermission } from '../../utils/permissions'
+import SystemDeletePanel from './components/SystemDeletePanel'
+import UserFormModal from './components/UserFormModal'
+import UserTable from './components/UserTable'
 import './SystemAdminPage.css'
 
 const emptyForm = {
@@ -277,77 +279,18 @@ export default function UserManagementPage({ currentUser }) {
       </section>
 
       {showForm && (
-        <div className="system-modal-backdrop" role="presentation" onClick={closeForm}>
-          <section className="system-modal" role="dialog" aria-modal="true" aria-labelledby="user-form-title" onClick={(event) => event.stopPropagation()}>
-            <div className="system-form-head">
-              <div>
-                <h3 id="user-form-title">{editingUser ? 'Cập nhật người dùng' : 'Thêm người dùng mới'}</h3>
-                <small>{canManageAdminFlags ? 'Bạn có thể gán quyền staff/superuser.' : 'Bạn chỉ có thể quản lý người dùng thường và nhóm quyền.'}</small>
-              </div>
-              <button type="button" className="system-modal-close" onClick={closeForm} disabled={saving} aria-label="Đóng popup">×</button>
-            </div>
-
-            <form className="system-form" onSubmit={handleSubmit}>
-              {error && <div className="system-notice error">{error}</div>}
-
-              <div className="system-form-grid three">
-                <label className="system-field">
-                  <span>Tên đăng nhập <b>*</b></span>
-                  <input name="username" value={form.username} onChange={handleChange} required maxLength={150} />
-                </label>
-                <label className="system-field">
-                  <span>Email</span>
-                  <input name="email" type="email" value={form.email} onChange={handleChange} maxLength={254} />
-                </label>
-                <label className="system-field">
-                  <span>Mật khẩu {editingUser ? '' : <b>*</b>}</span>
-                  <input name="password" type="password" value={form.password} onChange={handleChange} required={!editingUser} minLength={8} placeholder={editingUser ? 'Để trống nếu không đổi' : ''} />
-                </label>
-                <label className="system-field">
-                  <span>Họ</span>
-                  <input name="first_name" value={form.first_name} onChange={handleChange} maxLength={150} />
-                </label>
-                <label className="system-field">
-                  <span>Tên</span>
-                  <input name="last_name" value={form.last_name} onChange={handleChange} maxLength={150} />
-                </label>
-                <div className="system-check">
-                  <span>Trạng thái</span>
-                  <label><input name="is_active" type="checkbox" checked={form.is_active} onChange={handleChange} /> Đang hoạt động</label>
-                </div>
-                {canManageAdminFlags && (
-                  <>
-                    <div className="system-check">
-                      <span>Quản trị</span>
-                      <label><input name="is_staff" type="checkbox" checked={form.is_staff} onChange={handleChange} /> Staff</label>
-                    </div>
-                    <div className="system-check">
-                      <span>Toàn quyền</span>
-                      <label><input name="is_superuser" type="checkbox" checked={form.is_superuser} onChange={handleChange} /> Superuser</label>
-                    </div>
-                  </>
-                )}
-                <div className="system-field system-field-wide">
-                  <span>Nhóm quyền</span>
-                  <div className="system-role-grid">
-                    {roles.length === 0 && <div className="system-empty">Chưa có nhóm quyền.</div>}
-                    {roles.map((role) => (
-                      <label className="system-role-option" key={role.id}>
-                        <input type="checkbox" checked={form.groups.includes(String(role.id))} onChange={() => toggleRole(role.id)} />
-                        <span>{role.name}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="system-form-actions">
-                <button type="button" className="system-btn secondary" onClick={closeForm} disabled={saving}>Hủy</button>
-                <button type="submit" className="system-btn primary" disabled={saving}>{saving ? 'Đang lưu...' : 'Lưu người dùng'}</button>
-              </div>
-            </form>
-          </section>
-        </div>
+        <UserFormModal
+          canManageAdminFlags={canManageAdminFlags}
+          editingUser={editingUser}
+          error={error}
+          form={form}
+          onCancel={closeForm}
+          onChange={handleChange}
+          onSubmit={handleSubmit}
+          roles={roles}
+          saving={saving}
+          toggleRole={toggleRole}
+        />
       )}
 
       <section className="system-toolbar">
@@ -372,79 +315,30 @@ export default function UserManagementPage({ currentUser }) {
           </div>
         </div>
 
-        {loading ? (
-          <div className="system-empty">Đang tải người dùng...</div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="system-empty">Không có người dùng phù hợp.</div>
-        ) : (
-          <div className="system-table-wrap">
-            <table className="system-table">
-              <thead>
-                <tr>
-                  <th>Người dùng</th>
-                  <th>Nhóm quyền</th>
-                  <th>Trạng thái</th>
-                  <th>Lần đăng nhập cuối</th>
-                  {canManage && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>{user.full_name || user.username}</strong>
-                      <small>{user.username} · {user.email || 'Chưa có email'}</small>
-                    </td>
-                    <td>
-                      <div className="system-badges">
-                        {(user.group_names || []).length === 0 && <span className="system-badge">Chưa gán</span>}
-                        {(user.group_names || []).map((name) => <span className="system-badge blue" key={name}>{name}</span>)}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="system-badges">
-                        <span className={`system-badge ${user.is_active ? 'green' : 'red'}`}>{user.is_active ? 'Hoạt động' : 'Đã khóa'}</span>
-                        {user.is_staff && <span className="system-badge amber">Staff</span>}
-                        {user.is_superuser && <span className="system-badge red">Superuser</span>}
-                      </div>
-                    </td>
-                    <td>{formatDate(user.last_login)}</td>
-                    {canManage && <td>
-                      <div className="system-actions">
-                        {canChange && <button type="button" className="system-icon-btn" onClick={() => openEditForm(user)}>Sửa</button>}
-                        {canDelete && <button type="button" className="system-icon-btn danger" onClick={() => setDeleteTarget(user)}>Xóa</button>}
-                      </div>
-                    </td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <PaginationControls
-              itemLabel="người dùng"
-              loading={loading}
-              onPageChange={setPage}
-              page={page}
-              pageSize={PAGE_SIZE}
-              totalCount={filteredUsers.length}
-            />
-          </div>
-        )}
+        <UserTable
+          canChange={canChange}
+          canDelete={canDelete}
+          canManage={canManage}
+          formatDate={formatDate}
+          loading={loading}
+          onDelete={setDeleteTarget}
+          onEdit={openEditForm}
+          onPageChange={setPage}
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={filteredUsers.length}
+          users={paginatedUsers}
+        />
       </section>
 
-      {deleteTarget && (
-        <section className="system-form-panel">
-          <div className="system-form-head">
-            <div>
-              <h3>Xóa người dùng {deleteTarget.username}?</h3>
-              <small>Thao tác này không thể hoàn tác. Không thể xóa chính tài khoản đang đăng nhập.</small>
-            </div>
-            <div className="system-actions">
-              <button type="button" className="system-btn secondary" onClick={() => setDeleteTarget(null)} disabled={saving}>Hủy</button>
-              <button type="button" className="system-btn danger" onClick={handleDelete} disabled={saving}>{saving ? 'Đang xóa...' : 'Xóa'}</button>
-            </div>
-          </div>
-        </section>
-      )}
+      <SystemDeletePanel
+        description="Thao tác này không thể hoàn tác. Không thể xóa chính tài khoản đang đăng nhập."
+        itemName={deleteTarget?.username}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        saving={saving}
+        title={deleteTarget ? `Xóa người dùng ${deleteTarget.username}?` : ''}
+      />
     </div>
   )
 }

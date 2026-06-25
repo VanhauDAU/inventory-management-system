@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import PaginationControls from '../../components/common/PaginationControls'
 import useToast from '../../hooks/useToast'
 import { authJson, fetchPaginated } from '../../services/authApi'
 import { formatCurrency } from '../../utils/formatters'
 import { hasPermission } from '../../utils/permissions'
+import WarehouseDeleteModal from './components/WarehouseDeleteModal'
+import WarehouseForm from './components/WarehouseForm'
+import WarehouseStockModal from './components/WarehouseStockModal'
+import WarehouseTable from './components/WarehouseTable'
 import './WarehousePage.css'
 
 const initialForm = {
@@ -15,8 +18,6 @@ const initialForm = {
 }
 
 const PAGE_SIZE = 10
-
-const getProductPrice = (product) => product?.price ?? product?.selling_price ?? 0
 
 function getApiErrorMessage(data, fallbackStatus) {
   if (data?.detail) return data.detail
@@ -38,90 +39,6 @@ function getApiErrorMessage(data, fallbackStatus) {
 
   if (firstField && rawMessage) return `${fieldMap[firstField] || firstField}: ${rawMessage}`
   return `Lỗi API: ${fallbackStatus}`
-}
-
-function getProductImage(product) {
-  return product?.image || '/product-images/product-default.svg'
-}
-
-function WarehouseForm({ form, errors, editingWarehouse, onChange, onSubmit, onCancel, loading }) {
-  return (
-    <form className="warehouse-form" onSubmit={onSubmit} noValidate>
-      <div className="warehouse-form-grid">
-        <label className="warehouse-field">
-          <span>Tên kho <b>*</b></span>
-          <input
-            name="name"
-            value={form.name}
-            onChange={onChange}
-            className={errors.name ? 'input-error' : ''}
-            placeholder="Ví dụ: Kho trung tâm"
-            maxLength={255}
-          />
-          {errors.name && <small className="warehouse-error">{errors.name}</small>}
-        </label>
-
-        <label className="warehouse-field">
-          <span>Người phụ trách</span>
-          <input
-            name="manager_name"
-            value={form.manager_name}
-            onChange={onChange}
-            className={errors.manager_name ? 'input-error' : ''}
-            placeholder="Tên quản lý kho"
-            maxLength={255}
-          />
-          {errors.manager_name && <small className="warehouse-error">{errors.manager_name}</small>}
-        </label>
-
-        <label className="warehouse-field">
-          <span>Số điện thoại</span>
-          <input
-            name="phone"
-            value={form.phone}
-            onChange={onChange}
-            className={errors.phone ? 'input-error' : ''}
-            placeholder="Ví dụ: 0901234567"
-            maxLength={30}
-          />
-          {errors.phone && <small className="warehouse-error">{errors.phone}</small>}
-        </label>
-
-        <label className="warehouse-toggle">
-          <input
-            name="is_active"
-            type="checkbox"
-            checked={form.is_active}
-            onChange={onChange}
-          />
-          <span>Kho đang hoạt động</span>
-        </label>
-
-        <label className="warehouse-field warehouse-field-wide">
-          <span>Địa chỉ</span>
-          <textarea
-            name="address"
-            value={form.address}
-            onChange={onChange}
-            className={errors.address ? 'input-error' : ''}
-            placeholder="Nhập địa chỉ kho"
-            rows={4}
-            maxLength={1000}
-          />
-          {errors.address && <small className="warehouse-error">{errors.address}</small>}
-        </label>
-      </div>
-
-      <div className="warehouse-form-actions">
-        <button type="button" className="warehouse-btn secondary" onClick={onCancel} disabled={loading}>
-          Hủy
-        </button>
-        <button type="submit" className="warehouse-btn primary" disabled={loading}>
-          {loading ? 'Đang lưu...' : editingWarehouse ? 'Lưu thay đổi' : 'Thêm kho'}
-        </button>
-      </div>
-    </form>
-  )
 }
 
 export default function WarehousePage({ currentUser }) {
@@ -424,65 +341,19 @@ export default function WarehousePage({ currentUser }) {
           <small>Kho đã có phiếu hoặc còn tồn kho thì không xóa trực tiếp; hãy tắt trạng thái kho.</small>
         </div>
 
-        {loading ? (
-          <div className="warehouse-state">Đang tải danh sách kho...</div>
-        ) : visibleWarehouses.length === 0 ? (
-          <div className="warehouse-state">Không có kho phù hợp.</div>
-        ) : (
-          <div className="warehouse-table-wrap">
-            <table className="warehouse-table">
-              <thead>
-                <tr>
-                  <th>Kho</th>
-                  <th>Quản lý</th>
-                  <th>SĐT</th>
-                  <th>Loại SP</th>
-                  <th>Số lượng tồn</th>
-                  <th>Phiếu kho</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedWarehouses.map((warehouse) => (
-                  <tr key={warehouse.id}>
-                    <td>
-                      <div className="warehouse-name-cell">
-                        <strong>{warehouse.name}</strong>
-                        <small>{warehouse.address || 'Chưa có địa chỉ'}</small>
-                      </div>
-                    </td>
-                    <td>{warehouse.manager_name || 'Chưa gán'}</td>
-                    <td>{warehouse.phone || 'Chưa có'}</td>
-                    <td><span className="warehouse-count">{warehouse.product_kinds_count || 0}</span></td>
-                    <td><span className="warehouse-count">{warehouse.total_quantity || 0}</span></td>
-                    <td><span className="warehouse-count">{warehouse.stock_transactions_count || 0}</span></td>
-                    <td>
-                      <span className={`warehouse-status ${warehouse.is_active ? 'active' : 'inactive'}`}>
-                        {warehouse.is_active ? 'Đang hoạt động' : 'Tạm ngưng'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="warehouse-row-actions">
-                        <button type="button" className="warehouse-action detail" onClick={() => openStockDetail(warehouse)}>Tồn kho</button>
-                        {canChange && <button type="button" className="warehouse-action edit" onClick={() => openEditForm(warehouse)}>Sửa</button>}
-                        {canDelete && <button type="button" className="warehouse-action delete" onClick={() => setDeleteTarget(warehouse)}>Xóa</button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <PaginationControls
-              itemLabel="kho"
-              loading={loading}
-              onPageChange={setPage}
-              page={page}
-              pageSize={PAGE_SIZE}
-              totalCount={visibleWarehouses.length}
-            />
-          </div>
-        )}
+        <WarehouseTable
+          canChange={canChange}
+          canDelete={canDelete}
+          loading={loading}
+          onDelete={setDeleteTarget}
+          onEdit={openEditForm}
+          onPageChange={setPage}
+          onViewStock={openStockDetail}
+          page={page}
+          pageSize={PAGE_SIZE}
+          totalCount={visibleWarehouses.length}
+          warehouses={paginatedWarehouses}
+        />
       </section>
 
       {showForm && (
@@ -509,81 +380,20 @@ export default function WarehousePage({ currentUser }) {
         </div>
       )}
 
-      {selectedWarehouse && (
-        <div className="warehouse-modal-backdrop" role="presentation" onClick={() => setSelectedWarehouse(null)}>
-          <section className="warehouse-modal stock-detail" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="warehouse-modal-header">
-              <div>
-                <span className="warehouse-eyebrow">Tồn kho theo kho</span>
-                <h3>{selectedWarehouse.name}</h3>
-              </div>
-              <button type="button" aria-label="Đóng" onClick={() => setSelectedWarehouse(null)}>×</button>
-            </div>
+      <WarehouseStockModal
+        formatCurrency={formatCurrency}
+        loading={stockLoading}
+        onClose={() => setSelectedWarehouse(null)}
+        stocks={warehouseStocks}
+        warehouse={selectedWarehouse}
+      />
 
-            {stockLoading ? (
-              <div className="warehouse-state">Đang tải tồn kho...</div>
-            ) : warehouseStocks.length === 0 ? (
-              <div className="warehouse-state">Kho này chưa có sản phẩm tồn.</div>
-            ) : (
-              <div className="warehouse-stock-list">
-                {warehouseStocks.map((stock) => {
-                  const product = stock.product_detail
-                  return (
-                    <article className="warehouse-stock-item" key={stock.id}>
-                      <img src={getProductImage(product)} alt={product?.name || 'Sản phẩm'} />
-                      <div>
-                        <strong>{product?.name || `Sản phẩm #${stock.product}`}</strong>
-                        <span>{product?.sku || 'Chưa có SKU'} · {product?.category_detail?.name || 'Chưa có danh mục'}</span>
-                      </div>
-                      <div className="warehouse-stock-numbers">
-                        <strong>{stock.quantity}</strong>
-                        <span>{formatCurrency(Number(stock.quantity) * Number(getProductPrice(product)))}</span>
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-        </div>
-      )}
-
-      {deleteTarget && (
-        <div className="warehouse-modal-backdrop" role="presentation" onClick={() => !deleting && setDeleteTarget(null)}>
-          <section className="warehouse-modal delete" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="warehouse-modal-header">
-              <div>
-                <span className="warehouse-eyebrow">Xác nhận xóa</span>
-                <h3>{deleteTarget.name}</h3>
-              </div>
-              <button type="button" aria-label="Đóng" disabled={deleting} onClick={() => setDeleteTarget(null)}>×</button>
-            </div>
-
-            {(Number(deleteTarget.total_quantity || 0) > 0 || Number(deleteTarget.stock_transactions_count || 0) > 0) ? (
-              <div className="warehouse-notice error">
-                Không thể xóa kho này vì {Number(deleteTarget.total_quantity || 0) > 0
-                  ? `vẫn còn ${deleteTarget.total_quantity} sản phẩm tồn`
-                  : 'đã có phiếu kho'}.
-                Hãy tắt trạng thái kho nếu không còn sử dụng.
-              </div>
-            ) : (
-              <p className="warehouse-delete-text">Bạn muốn xóa kho này khỏi hệ thống?</p>
-            )}
-
-            <div className="warehouse-delete-actions">
-              <button type="button" className="warehouse-btn secondary" disabled={deleting} onClick={() => setDeleteTarget(null)}>Hủy</button>
-              <button
-                type="button"
-                className="warehouse-btn danger"
-                disabled={deleting || Number(deleteTarget.total_quantity || 0) > 0 || Number(deleteTarget.stock_transactions_count || 0) > 0}
-                onClick={handleDelete}
-              >
-                {deleting ? 'Đang xóa...' : 'Xóa kho'}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      <WarehouseDeleteModal
+        deleting={deleting}
+        onClose={() => setDeleteTarget(null)}
+        onDelete={handleDelete}
+        warehouse={deleteTarget}
+      />
     </div>
   )
 }

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import PaginationControls from '../../components/common/PaginationControls'
 import useToast from '../../hooks/useToast'
 import { authJson, fetchPaginated } from '../../services/authApi'
 import { formatCurrency, formatDateTime } from '../../utils/formatters'
 import { hasPermission } from '../../utils/permissions'
+import SupplierDeleteModal from './components/SupplierDeleteModal'
+import SupplierForm from './components/SupplierForm'
+import SupplierProductsModal from './components/SupplierProductsModal'
+import SupplierTable from './components/SupplierTable'
 import './SupplierPage.css'
 
 const initialForm = {
@@ -18,9 +21,6 @@ const initialForm = {
 }
 
 const PAGE_SIZE = 10
-
-const getProductPrice = (product) => product?.price ?? product?.selling_price ?? 0
-const getProductImage = (product) => product?.image || '/product-images/product-default.svg'
 
 function getApiErrorMessage(data, fallbackStatus) {
   if (data?.detail) return data.detail
@@ -45,127 +45,6 @@ function getApiErrorMessage(data, fallbackStatus) {
 
   if (firstField && rawMessage) return `${fieldMap[firstField] || firstField}: ${rawMessage}`
   return `Lỗi API: ${fallbackStatus}`
-}
-
-function SupplierForm({ form, errors, editingSupplier, onChange, onSubmit, onCancel, loading }) {
-  return (
-    <form className="supplier-form" onSubmit={onSubmit} noValidate>
-      <div className="supplier-form-grid">
-        <label className="supplier-field">
-          <span>Tên nhà phân phối <b>*</b></span>
-          <input
-            name="name"
-            value={form.name}
-            onChange={onChange}
-            className={errors.name ? 'input-error' : ''}
-            placeholder="Ví dụ: Công ty TNHH ABC"
-            maxLength={255}
-          />
-          {errors.name && <small className="supplier-error">{errors.name}</small>}
-        </label>
-
-        <label className="supplier-field">
-          <span>Người liên hệ</span>
-          <input
-            name="contact_name"
-            value={form.contact_name}
-            onChange={onChange}
-            className={errors.contact_name ? 'input-error' : ''}
-            placeholder="Tên người phụ trách"
-            maxLength={255}
-          />
-          {errors.contact_name && <small className="supplier-error">{errors.contact_name}</small>}
-        </label>
-
-        <label className="supplier-field">
-          <span>Số điện thoại</span>
-          <input
-            name="phone"
-            value={form.phone}
-            onChange={onChange}
-            className={errors.phone ? 'input-error' : ''}
-            placeholder="Ví dụ: 0901234567"
-            maxLength={30}
-          />
-          {errors.phone && <small className="supplier-error">{errors.phone}</small>}
-        </label>
-
-        <label className="supplier-field">
-          <span>Email</span>
-          <input
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={onChange}
-            className={errors.email ? 'input-error' : ''}
-            placeholder="contact@example.com"
-            maxLength={254}
-          />
-          {errors.email && <small className="supplier-error">{errors.email}</small>}
-        </label>
-
-        <label className="supplier-field">
-          <span>Mã số thuế</span>
-          <input
-            name="tax_code"
-            value={form.tax_code}
-            onChange={onChange}
-            className={errors.tax_code ? 'input-error' : ''}
-            placeholder="MST hoặc mã nhà phân phối"
-            maxLength={100}
-          />
-          {errors.tax_code && <small className="supplier-error">{errors.tax_code}</small>}
-        </label>
-
-        <label className="supplier-toggle">
-          <input
-            name="is_active"
-            type="checkbox"
-            checked={form.is_active}
-            onChange={onChange}
-          />
-          <span>Đang hợp tác</span>
-        </label>
-
-        <label className="supplier-field supplier-field-wide">
-          <span>Địa chỉ</span>
-          <textarea
-            name="address"
-            value={form.address}
-            onChange={onChange}
-            className={errors.address ? 'input-error' : ''}
-            placeholder="Nhập địa chỉ nhà phân phối"
-            rows={3}
-            maxLength={1000}
-          />
-          {errors.address && <small className="supplier-error">{errors.address}</small>}
-        </label>
-
-        <label className="supplier-field supplier-field-wide">
-          <span>Ghi chú</span>
-          <textarea
-            name="note"
-            value={form.note}
-            onChange={onChange}
-            className={errors.note ? 'input-error' : ''}
-            placeholder="Điều khoản, công nợ, lịch giao hàng, ghi chú nội bộ..."
-            rows={4}
-            maxLength={1000}
-          />
-          {errors.note && <small className="supplier-error">{errors.note}</small>}
-        </label>
-      </div>
-
-      <div className="supplier-form-actions">
-        <button type="button" className="supplier-btn secondary" onClick={onCancel} disabled={loading}>
-          Hủy
-        </button>
-        <button type="submit" className="supplier-btn primary" disabled={loading}>
-          {loading ? 'Đang lưu...' : editingSupplier ? 'Lưu thay đổi' : 'Thêm nhà phân phối'}
-        </button>
-      </div>
-    </form>
-  )
 }
 
 export default function SupplierPage({ currentUser }) {
@@ -471,68 +350,20 @@ export default function SupplierPage({ currentUser }) {
           <small>Nhà phân phối đang có sản phẩm thì không xóa trực tiếp; hãy chuyển sản phẩm hoặc tắt trạng thái.</small>
         </div>
 
-        {loading ? (
-          <div className="supplier-state">Đang tải nhà phân phối...</div>
-        ) : visibleSuppliers.length === 0 ? (
-          <div className="supplier-state">Không có nhà phân phối phù hợp.</div>
-        ) : (
-          <div className="supplier-table-wrap">
-            <table className="supplier-table">
-              <thead>
-                <tr>
-                  <th>Nhà phân phối</th>
-                  <th>Liên hệ</th>
-                  <th>Email</th>
-                  <th>Mã số thuế</th>
-                  <th>Sản phẩm</th>
-                  <th>Trạng thái</th>
-                  <th>Cập nhật</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedSuppliers.map((supplier) => (
-                  <tr key={supplier.id}>
-                    <td>
-                      <div className="supplier-name-cell">
-                        <strong>{supplier.name}</strong>
-                        <small>{supplier.address || supplier.note || 'Chưa có địa chỉ/ghi chú'}</small>
-                      </div>
-                    </td>
-                    <td>
-                      <strong>{supplier.contact_name || 'Chưa gán'}</strong>
-                      <small>{supplier.phone || 'Chưa có SĐT'}</small>
-                    </td>
-                    <td>{supplier.email || 'Chưa có'}</td>
-                    <td>{supplier.tax_code || 'Chưa có'}</td>
-                    <td><span className="supplier-count">{supplier.products_count || 0}</span></td>
-                    <td>
-                      <span className={`supplier-status ${supplier.is_active ? 'active' : 'inactive'}`}>
-                        {supplier.is_active ? 'Đang hợp tác' : 'Tạm ngưng'}
-                      </span>
-                    </td>
-                    <td>{formatDateTime(supplier.updated_at)}</td>
-                    <td>
-                      <div className="supplier-row-actions">
-                        <button type="button" className="supplier-action detail" onClick={() => openProductDetail(supplier)}>Sản phẩm</button>
-                        {canChange && <button type="button" className="supplier-action edit" onClick={() => openEditForm(supplier)}>Sửa</button>}
-                        {canDelete && <button type="button" className="supplier-action delete" onClick={() => setDeleteTarget(supplier)}>Xóa</button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <PaginationControls
-              itemLabel="nhà phân phối"
-              loading={loading}
-              onPageChange={setPage}
-              page={page}
-              pageSize={PAGE_SIZE}
-              totalCount={visibleSuppliers.length}
-            />
-          </div>
-        )}
+        <SupplierTable
+          canChange={canChange}
+          canDelete={canDelete}
+          formatDateTime={formatDateTime}
+          loading={loading}
+          onDelete={setDeleteTarget}
+          onEdit={openEditForm}
+          onPageChange={setPage}
+          onViewProducts={openProductDetail}
+          page={page}
+          pageSize={PAGE_SIZE}
+          suppliers={paginatedSuppliers}
+          totalCount={visibleSuppliers.length}
+        />
       </section>
 
       {showForm && (
@@ -559,76 +390,20 @@ export default function SupplierPage({ currentUser }) {
         </div>
       )}
 
-      {selectedSupplier && (
-        <div className="supplier-modal-backdrop" role="presentation" onClick={() => setSelectedSupplier(null)}>
-          <section className="supplier-modal products" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="supplier-modal-header">
-              <div>
-                <span className="supplier-eyebrow">Sản phẩm liên kết</span>
-                <h3>{selectedSupplier.name}</h3>
-              </div>
-              <button type="button" aria-label="Đóng" onClick={() => setSelectedSupplier(null)}>×</button>
-            </div>
+      <SupplierProductsModal
+        formatCurrency={formatCurrency}
+        loading={productsLoading}
+        onClose={() => setSelectedSupplier(null)}
+        products={supplierProducts}
+        supplier={selectedSupplier}
+      />
 
-            {productsLoading ? (
-              <div className="supplier-state">Đang tải sản phẩm...</div>
-            ) : supplierProducts.length === 0 ? (
-              <div className="supplier-state">Nhà phân phối này chưa có sản phẩm.</div>
-            ) : (
-              <div className="supplier-product-list">
-                {supplierProducts.map((product) => (
-                  <article className="supplier-product-item" key={product.id}>
-                    <img src={getProductImage(product)} alt={product.name} />
-                    <div>
-                      <strong>{product.name}</strong>
-                      <span>{product.sku || `#${product.id}`} · {product.category_detail?.name || 'Chưa có danh mục'}</span>
-                    </div>
-                    <div className="supplier-product-numbers">
-                      <strong>{formatCurrency(getProductPrice(product))}</strong>
-                      <span>Tồn: {product.quantity ?? 0}</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-      )}
-
-      {deleteTarget && (
-        <div className="supplier-modal-backdrop" role="presentation" onClick={() => !deleting && setDeleteTarget(null)}>
-          <section className="supplier-modal delete" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <div className="supplier-modal-header">
-              <div>
-                <span className="supplier-eyebrow">Xác nhận xóa</span>
-                <h3>{deleteTarget.name}</h3>
-              </div>
-              <button type="button" aria-label="Đóng" disabled={deleting} onClick={() => setDeleteTarget(null)}>×</button>
-            </div>
-
-            {Number(deleteTarget.products_count || 0) > 0 ? (
-              <div className="supplier-notice error">
-                Nhà phân phối này đang có {deleteTarget.products_count} sản phẩm nên không thể xóa.
-                Hãy chuyển các sản phẩm sang nhà phân phối khác hoặc tắt trạng thái nhà phân phối.
-              </div>
-            ) : (
-              <p className="supplier-delete-text">Bạn muốn xóa nhà phân phối này khỏi hệ thống?</p>
-            )}
-
-            <div className="supplier-delete-actions">
-              <button type="button" className="supplier-btn secondary" disabled={deleting} onClick={() => setDeleteTarget(null)}>Hủy</button>
-              <button
-                type="button"
-                className="supplier-btn danger"
-                disabled={deleting || Number(deleteTarget.products_count || 0) > 0}
-                onClick={handleDelete}
-              >
-                {deleting ? 'Đang xóa...' : 'Xóa nhà phân phối'}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+      <SupplierDeleteModal
+        deleting={deleting}
+        onClose={() => setDeleteTarget(null)}
+        onDelete={handleDelete}
+        supplier={deleteTarget}
+      />
     </div>
   )
 }
