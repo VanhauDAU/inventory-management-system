@@ -12,6 +12,7 @@
 
 ## Tài liệu quan trọng
 
+- Tổng quan project và luồng code: `docs/tong-quan-project-va-luong-code.md`.
 - Kế hoạch và trạng thái dự án: `docs/01-phan-tich/ke-hoach-trang-thai-du-an.md`.
 - Phân công thành viên: `docs/01-phan-tich/phan-cong-thanh-vien.md`.
 - Changelog: `docs/CHANGELOG.md`.
