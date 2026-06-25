@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import PaginationControls from '../../components/common/PaginationControls'
 import useToast from '../../hooks/useToast'
 import { authJson, fetchPaginated } from '../../services/authApi'
 import { formatCurrency } from '../../utils/formatters'
@@ -12,6 +13,8 @@ const initialForm = {
   manager_name: '',
   is_active: true,
 }
+
+const PAGE_SIZE = 10
 
 const getProductPrice = (product) => product?.price ?? product?.selling_price ?? 0
 
@@ -136,6 +139,7 @@ export default function WarehousePage({ currentUser }) {
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingWarehouse, setEditingWarehouse] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -186,6 +190,15 @@ export default function WarehousePage({ currentUser }) {
       return matchesSearch && matchesStatus
     })
   }, [search, statusFilter, warehouses])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, statusFilter])
+
+  const paginatedWarehouses = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE
+    return visibleWarehouses.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [page, visibleWarehouses])
 
   const stats = useMemo(() => {
     return {
@@ -431,7 +444,7 @@ export default function WarehousePage({ currentUser }) {
                 </tr>
               </thead>
               <tbody>
-                {visibleWarehouses.map((warehouse) => (
+                {paginatedWarehouses.map((warehouse) => (
                   <tr key={warehouse.id}>
                     <td>
                       <div className="warehouse-name-cell">
@@ -460,6 +473,14 @@ export default function WarehousePage({ currentUser }) {
                 ))}
               </tbody>
             </table>
+            <PaginationControls
+              itemLabel="kho"
+              loading={loading}
+              onPageChange={setPage}
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={visibleWarehouses.length}
+            />
           </div>
         )}
       </section>

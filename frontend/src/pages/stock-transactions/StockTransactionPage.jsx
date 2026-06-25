@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import PaginationControls from '../../components/common/PaginationControls'
 import './StockTransactionPage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+const PAGE_SIZE = 10
 
 const transactionMeta = {
   import: {
@@ -569,6 +571,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
   const [toast, setToast] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [historySearch, setHistorySearch] = useState('')
+  const [historyPage, setHistoryPage] = useState(1)
   const [historyFilters, setHistoryFilters] = useState(() => {
     const today = new Date()
     const thirtyDaysAgo = new Date(today)
@@ -743,6 +746,15 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
       ].join(' ').toLowerCase().includes(keyword)
     })
   }, [historySearch, transactions])
+
+  useEffect(() => {
+    setHistoryPage(1)
+  }, [historyFilters, historySearch, transactionType])
+
+  const paginatedTransactions = useMemo(() => {
+    const startIndex = (historyPage - 1) * PAGE_SIZE
+    return filteredTransactions.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [filteredTransactions, historyPage])
 
   const historyStats = useMemo(() => {
     return filteredTransactions.reduce((stats, transaction) => {
@@ -1325,7 +1337,7 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((transaction) => {
+                {paginatedTransactions.map((transaction) => {
                   const quantity = (transaction.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)
                   const amount = (transaction.items || []).reduce((sum, item) => sum + Number(item.total_amount || 0), 0)
                   const itemNames = (transaction.items || [])
@@ -1365,6 +1377,14 @@ export default function StockTransactionPage({ transactionType = 'all' }) {
                 })}
               </tbody>
             </table>
+            <PaginationControls
+              itemLabel="phiếu"
+              loading={loading}
+              onPageChange={setHistoryPage}
+              page={historyPage}
+              pageSize={PAGE_SIZE}
+              totalCount={filteredTransactions.length}
+            />
           </div>
         )}
       </section>

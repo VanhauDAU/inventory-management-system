@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import PaginationControls from '../../components/common/PaginationControls'
 import api from '../../services/api'
 import { hasPermission } from '../../utils/permissions'
 import './SystemAdminPage.css'
@@ -7,6 +8,8 @@ const emptyForm = {
   name: '',
   permissions: [],
 }
+
+const PAGE_SIZE = 10
 
 const actionOrder = ['view', 'add', 'change', 'delete']
 
@@ -82,6 +85,7 @@ export default function RoleManagementPage({ currentUser }) {
   const [toast, setToast] = useState('')
   const [search, setSearch] = useState('')
   const [permissionSearch, setPermissionSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingRole, setEditingRole] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -120,6 +124,15 @@ export default function RoleManagementPage({ currentUser }) {
       ...(role.permission_details || []).map((permission) => `${permission.name} ${permission.codename} ${permission.app_label} ${permission.model}`),
     ].join(' ').toLowerCase().includes(keyword))
   }, [roles, search])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search])
+
+  const paginatedRoles = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE
+    return filteredRoles.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [filteredRoles, page])
 
   const filteredPermissions = useMemo(() => {
     const keyword = permissionSearch.trim().toLowerCase()
@@ -439,7 +452,7 @@ export default function RoleManagementPage({ currentUser }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredRoles.map((role) => (
+                {paginatedRoles.map((role) => (
                   <tr key={role.id}>
                     <td>
                       <strong>{role.name}</strong>
@@ -467,6 +480,14 @@ export default function RoleManagementPage({ currentUser }) {
                 ))}
               </tbody>
             </table>
+            <PaginationControls
+              itemLabel="nhóm quyền"
+              loading={loading}
+              onPageChange={setPage}
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={filteredRoles.length}
+            />
           </div>
         )}
       </section>

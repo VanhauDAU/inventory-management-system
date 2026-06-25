@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import PaginationControls from '../../components/common/PaginationControls'
 import api from '../../services/api'
 import { hasPermission } from '../../utils/permissions'
 import './SystemAdminPage.css'
@@ -14,6 +15,8 @@ const emptyForm = {
   is_superuser: false,
   groups: [],
 }
+
+const PAGE_SIZE = 10
 
 const unwrapList = (data) => Array.isArray(data) ? data : data?.results || []
 
@@ -74,6 +77,7 @@ export default function UserManagementPage({ currentUser }) {
   const [toast, setToast] = useState('')
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -127,6 +131,15 @@ export default function UserManagementPage({ currentUser }) {
       ].filter(Boolean).join(' ').toLowerCase().includes(keyword)
     })
   }, [roleFilter, search, users])
+
+  useEffect(() => {
+    setPage(1)
+  }, [roleFilter, search])
+
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE
+    return filteredUsers.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [filteredUsers, page])
 
   const stats = useMemo(() => ({
     total: users.length,
@@ -376,7 +389,7 @@ export default function UserManagementPage({ currentUser }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => (
+                {paginatedUsers.map((user) => (
                   <tr key={user.id}>
                     <td>
                       <strong>{user.full_name || user.username}</strong>
@@ -406,6 +419,14 @@ export default function UserManagementPage({ currentUser }) {
                 ))}
               </tbody>
             </table>
+            <PaginationControls
+              itemLabel="người dùng"
+              loading={loading}
+              onPageChange={setPage}
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={filteredUsers.length}
+            />
           </div>
         )}
       </section>

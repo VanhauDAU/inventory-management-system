@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import PaginationControls from '../../components/common/PaginationControls'
 import useToast from '../../hooks/useToast'
 import { authJson, fetchPaginated } from '../../services/authApi'
 import { formatCurrency, formatDateTime } from '../../utils/formatters'
@@ -15,6 +16,8 @@ const initialForm = {
   note: '',
   is_active: true,
 }
+
+const PAGE_SIZE = 10
 
 const getProductPrice = (product) => product?.price ?? product?.selling_price ?? 0
 const getProductImage = (product) => product?.image || '/product-images/product-default.svg'
@@ -180,6 +183,7 @@ export default function SupplierPage({ currentUser }) {
   const [formError, setFormError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingSupplier, setEditingSupplier] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -231,6 +235,15 @@ export default function SupplierPage({ currentUser }) {
       return matchesSearch && matchesStatus
     })
   }, [search, statusFilter, suppliers])
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, statusFilter])
+
+  const paginatedSuppliers = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE
+    return visibleSuppliers.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [page, visibleSuppliers])
 
   const stats = useMemo(() => ({
     total: suppliers.length,
@@ -478,7 +491,7 @@ export default function SupplierPage({ currentUser }) {
                 </tr>
               </thead>
               <tbody>
-                {visibleSuppliers.map((supplier) => (
+                {paginatedSuppliers.map((supplier) => (
                   <tr key={supplier.id}>
                     <td>
                       <div className="supplier-name-cell">
@@ -510,6 +523,14 @@ export default function SupplierPage({ currentUser }) {
                 ))}
               </tbody>
             </table>
+            <PaginationControls
+              itemLabel="nhà phân phối"
+              loading={loading}
+              onPageChange={setPage}
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={visibleSuppliers.length}
+            />
           </div>
         )}
       </section>

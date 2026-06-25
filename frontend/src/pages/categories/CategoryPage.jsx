@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import PaginationControls from '../../components/common/PaginationControls'
 import useToast from '../../hooks/useToast'
 import { authJson, fetchPaginated } from '../../services/authApi'
 import { formatDateTime } from '../../utils/formatters'
@@ -11,6 +12,8 @@ const initialForm = {
   parent: '',
   is_active: true,
 }
+
+const PAGE_SIZE = 10
 
 function getApiErrorMessage(data, fallbackStatus) {
   if (data?.detail) return data.detail
@@ -159,6 +162,7 @@ export default function CategoryPage({ currentUser }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [parentFilter, setParentFilter] = useState('all')
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -214,6 +218,15 @@ export default function CategoryPage({ currentUser }) {
       return matchesSearch && matchesStatus && matchesParent
     })
   }, [flatCategories, parentFilter, search, statusFilter])
+
+  useEffect(() => {
+    setPage(1)
+  }, [parentFilter, search, statusFilter])
+
+  const paginatedCategories = useMemo(() => {
+    const startIndex = (page - 1) * PAGE_SIZE
+    return visibleCategories.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [page, visibleCategories])
 
   const stats = useMemo(() => {
     const rootCount = categories.filter((category) => !category.parent).length
@@ -455,7 +468,7 @@ export default function CategoryPage({ currentUser }) {
                 </tr>
               </thead>
               <tbody>
-                {visibleCategories.map((category) => (
+                {paginatedCategories.map((category) => (
                   <tr key={category.id}>
                     <td>
                       <div className="category-name-cell" style={{ paddingLeft: `${category.level * 1.25}rem` }}>
@@ -485,6 +498,14 @@ export default function CategoryPage({ currentUser }) {
                 ))}
               </tbody>
             </table>
+            <PaginationControls
+              itemLabel="danh mục"
+              loading={loading}
+              onPageChange={setPage}
+              page={page}
+              pageSize={PAGE_SIZE}
+              totalCount={visibleCategories.length}
+            />
           </div>
         )}
       </section>
