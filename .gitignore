@@ -1,17 +1,25 @@
-venv/
-__pycache__/
-*.pyc
-db.sqlite3
-.env
+# OS / editor
 .DS_Store
-<<<<<<< HEAD
 .vscode/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+db.sqlite3
+backend/db.sqlite3
+backend/staticfiles/
+backend/media/
+
+# Node / Vite
 node_modules/
 dist/
 .vite/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
-=======
-.vscode/
->>>>>>> feature/frontend-crud
+
+# Environment
+.env

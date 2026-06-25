@@ -11,6 +11,7 @@ Hệ thống quản lý sản phẩm và tồn kho được xây dựng theo mô
 - [Yêu cầu môi trường](#yêu-cầu-môi-trường)
 - [Chạy dự án với Docker](#chạy-dự-án-với-docker)
 - [Chạy dự án thủ công](#chạy-dự-án-thủ-công)
+- [Deploy lên Render](#deploy-lên-render)
 - [Tài khoản và xác thực](#tài-khoản-và-xác-thực)
 - [API chính](#api-chính)
 - [Kiểm thử và CI](#kiểm-thử-và-ci)
@@ -92,6 +93,7 @@ PostgreSQL 16 / SQLite
 ```
 
 Frontend và backend là hai ứng dụng độc lập. Docker Compose hiện khởi chạy PostgreSQL và Django backend; frontend được chạy riêng bằng Vite.
+Repo được giữ theo dạng monorepo gọn để Render có thể deploy từng service bằng `rootDir`.
 
 ## Cấu trúc thư mục
 
@@ -106,6 +108,8 @@ product-management-system/
 │   ├── products/              # Sản phẩm
 │   ├── reports/               # Báo cáo tồn kho
 │   ├── suppliers/             # Nhà cung cấp
+│   ├── .env.example           # Mẫu biến môi trường duy nhất của dự án
+│   ├── build.sh               # Build backend khi deploy Render
 │   ├── Dockerfile
 │   ├── entrypoint.sh
 │   ├── manage.py
@@ -114,16 +118,23 @@ product-management-system/
 │   ├── public/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── charts/
+│   │   │   ├── chat/
+│   │   │   ├── common/
+│   │   │   └── layout/
+│   │   ├── hooks/
 │   │   ├── pages/
+│   │   │   └── products/
+│   │   │       ├── components/
+│   │   │       └── hooks/
 │   │   ├── services/
 │   │   └── utils/
-│   ├── .env.example
 │   ├── package.json
 │   └── vite.config.js
 ├── docs/                      # Phân tích, thiết kế, API và triển khai
 ├── .github/workflows/ci.yml
-├── .env.example
 ├── docker-compose.yml
+├── render.yaml                # Blueprint deploy backend, frontend và PostgreSQL trên Render
 └── README.md
 ```
 
@@ -136,39 +147,15 @@ Chọn một trong hai cách chạy:
 
 ## Chạy dự án với Docker
 
-### 1. Tạo cấu hình backend và database
+### 1. Tạo cấu hình môi trường
 
 Tại thư mục gốc:
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-Cập nhật các giá trị quan trọng trong `.env`:
-
-```env
-DJANGO_SECRET_KEY=replace-with-a-secret-key
-DJANGO_DEBUG=True
-DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost,backend
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-DJANGO_SUPERUSER_USERNAME=
-DJANGO_SUPERUSER_EMAIL=
-DJANGO_SUPERUSER_PASSWORD=
-
-DB_ENGINE=postgres
-POSTGRES_DB=product_management
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
-POSTGRES_HOST_PORT=5432
-
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.2
-OPENAI_CHAT_MODEL=gpt-5.2
-```
-
-`POSTGRES_HOST=db` là hostname dùng bên trong Docker Compose. Không commit file `.env` chứa thông tin thật.
+Cập nhật giá trị thật trong `backend/.env`. Đây là file env duy nhất cho local/Docker; frontend cũng đọc `VITE_API_URL` từ file này. Không commit file `backend/.env`.
 
 ### 2. Khởi chạy PostgreSQL và backend
 
@@ -189,19 +176,12 @@ docker compose logs -f backend
 
 ### 3. Khởi chạy frontend
 
-Vite đọc biến môi trường từ thư mục `frontend`, vì vậy cần tạo file riêng:
+Vite đã được cấu hình đọc biến môi trường từ `backend/.env`, vì vậy không cần tạo file env riêng cho frontend.
 
 ```bash
-cp frontend/.env.example frontend/.env
 cd frontend
 npm install
 npm run dev
-```
-
-Nội dung mặc định của `frontend/.env`:
-
-```env
-VITE_API_URL=http://localhost:8000/api
 ```
 
 Nếu cài mới và Vite báo không tìm thấy module `axios`, cài dependency đang được frontend sử dụng:
@@ -238,10 +218,10 @@ docker compose down -v
 ### Backend với SQLite
 
 ```bash
-cp .env.example .env
+cp backend/.env.example backend/.env
 ```
 
-Đổi cấu hình database trong `.env`:
+Đổi cấu hình database trong `backend/.env`:
 
 ```env
 DB_ENGINE=sqlite
@@ -278,7 +258,6 @@ Sau đó chạy migration và server như hướng dẫn phía trên.
 ### Frontend
 
 ```bash
-cp frontend/.env.example frontend/.env
 cd frontend
 npm install
 npm run dev
@@ -290,6 +269,28 @@ Build bản production:
 npm run build
 npm run preview
 ```
+
+## Deploy lên Render
+
+Repo đã có `render.yaml` ở thư mục gốc để tạo ba tài nguyên trên Render:
+
+- `inventory-management-api`: Django web service, `rootDir: backend`.
+- `inventory-management-web`: Vite static site, `rootDir: frontend`.
+- `inventory-management-db`: PostgreSQL dùng private connection string.
+
+Luồng deploy nhanh:
+
+1. Push repo lên GitHub/GitLab.
+2. Trên Render, tạo Blueprint từ repo này.
+3. Kiểm tra các biến môi trường được prompt:
+   - `OPENAI_API_KEY`: có thể để trống nếu không dùng AI.
+   - `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`, `DJANGO_SUPERUSER_PASSWORD`: cấu hình nếu muốn tự tạo admin lúc deploy.
+4. Sau khi frontend có domain thật, nếu domain không đúng `https://inventory-management-web.onrender.com`, cập nhật lại:
+   - Backend `CORS_ALLOWED_ORIGINS`.
+   - Frontend `VITE_API_URL`, trỏ về `https://<backend-domain>/api`.
+
+Backend build bằng `backend/build.sh`, chạy migration trong `preDeployCommand`, rồi start bằng Gunicorn. Frontend build bằng `npm ci && npm run build` và publish thư mục `frontend/dist`.
+Backend được pin Python 3.12 trên Render để khớp Dockerfile và CI.
 
 ## Tài khoản và xác thực
 

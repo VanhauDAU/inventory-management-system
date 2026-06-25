@@ -12,12 +12,13 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR.parent / ".env")
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -139,9 +140,36 @@ WSGI_APPLICATION = 'product_management.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+database_url = os.getenv("DATABASE_URL", "").strip()
 db_engine = os.getenv("DB_ENGINE", "sqlite").lower()
 
-if db_engine in ("postgres", "postgresql"):
+
+def postgres_database_from_url(url):
+    parsed = urlparse(url)
+    query = parse_qs(parsed.query)
+    options = {}
+    sslmode = query.get("sslmode", [""])[0]
+    if sslmode:
+        options["sslmode"] = sslmode
+
+    database = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": unquote(parsed.path.lstrip("/")),
+        "USER": unquote(parsed.username or ""),
+        "PASSWORD": unquote(parsed.password or ""),
+        "HOST": parsed.hostname or "",
+        "PORT": str(parsed.port or ""),
+    }
+    if options:
+        database["OPTIONS"] = options
+    return database
+
+
+if database_url:
+    DATABASES = {
+        "default": postgres_database_from_url(database_url),
+    }
+elif db_engine in ("postgres", "postgresql"):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
