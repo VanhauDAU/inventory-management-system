@@ -289,7 +289,7 @@ Luồng deploy nhanh:
    - Backend `CORS_ALLOWED_ORIGINS`.
    - Frontend `VITE_API_URL`, trỏ về `https://<backend-domain>/api`.
 
-Backend build bằng `backend/build.sh`, chạy migration trong `preDeployCommand`, rồi start bằng Gunicorn. Frontend build bằng `npm ci && npm run build` và publish thư mục `frontend/dist`.
+Backend build bằng `backend/build.sh`, sau đó `startCommand` chạy migration, tạo superuser nếu có env, rồi start bằng Gunicorn. Cách này dùng được với Render free tier vì không cần `preDeployCommand`. Frontend build bằng `npm ci && npm run build` và publish thư mục `frontend/dist`.
 Backend được pin Python 3.12 trên Render để khớp Dockerfile và CI.
 
 ## Tài khoản và xác thực
