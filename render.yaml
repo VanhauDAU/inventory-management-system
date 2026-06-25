@@ -1,0 +1,61 @@
+databases:
+  - name: inventory-management-db
+    plan: free
+    databaseName: inventory_management
+    user: inventory_user
+    postgresMajorVersion: "16"
+    ipAllowList: []
+
+services:
+  - type: web
+    name: inventory-management-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: ./build.sh
+    preDeployCommand: python manage.py migrate --noinput && python manage.py ensure_superuser
+    startCommand: gunicorn product_management.wsgi:application --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
+    healthCheckPath: /api/health/
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DB_ENGINE
+        value: postgres
+      - key: DATABASE_URL
+        fromDatabase:
+          name: inventory-management-db
+          property: connectionString
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://inventory-management-web.onrender.com
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-5.2
+      - key: OPENAI_CHAT_MODEL
+        value: gpt-5.2
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      - key: DJANGO_SUPERUSER_RESET_PASSWORD
+        value: "False"
+
+  - type: web
+    name: inventory-management-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://inventory-management-api.onrender.com/api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

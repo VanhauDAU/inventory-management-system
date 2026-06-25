@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getCategories, getSuppliers } from '../services/productService'
-import '../styles/ProductForm.css'
+import { getCategories, getSuppliers } from '../../../services/productService'
+import './ProductForm.css'
 
 const unitOptions = [
   { value: 'piece', label: 'Cái' },

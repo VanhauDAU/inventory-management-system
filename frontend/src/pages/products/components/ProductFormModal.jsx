@@ -1,4 +1,4 @@
-import ProductForm from '../../../components/ProductForm'
+import ProductForm from './ProductForm'
 
 export default function ProductFormModal({
   error,

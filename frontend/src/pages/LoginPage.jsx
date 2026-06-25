@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import '../styles/LoginPage.css'
+import './LoginPage.css'
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 

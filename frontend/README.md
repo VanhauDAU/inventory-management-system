@@ -1,32 +1,32 @@
-# Frontend - Lê Đình Nguyên
+# Frontend
 
-Phần frontend này chỉ thực hiện đúng nhiệm vụ được phân công cho Lê Đình Nguyên:
+Ứng dụng React/Vite cho hệ thống quản lý sản phẩm và tồn kho.
 
-- Setup React/Vite.
-- Thiết kế layout giao diện chính.
-- Thiết kế trang chính dạng website sản phẩm.
-- Hiển thị danh mục sản phẩm.
-- Hiển thị danh sách sản phẩm.
-- Hiển thị chi tiết sản phẩm.
-- Giữ mục Thống kê như một trang riêng trong giao diện chính.
-- Gọi `GET /api/products/` và `GET /api/categories/` khi có access token.
-- Hiển thị loading, empty state, error state và pagination.
+## Cấu trúc chính
 
-Không thực hiện backend, database, đăng nhập, thêm, sửa, xóa sản phẩm, Docker hoặc CI.
+```text
+src/
+├── components/          # Component dùng chung: layout, chart, common, chat
+├── hooks/               # Hook đọc dữ liệu dashboard và báo cáo
+├── pages/               # Màn hình nghiệp vụ theo từng module
+├── services/            # Axios client và API service
+└── utils/               # Helper format, permission, pagination
+```
 
-## Chạy frontend
+Component chỉ dùng riêng cho một màn hình được đặt gần màn hình đó, ví dụ `src/pages/products/components/`.
+
+## Chạy local
 
 ```bash
-cd frontend
 npm install
 npm run dev
 ```
 
-Frontend đọc API URL từ `.env`:
+Frontend đọc `VITE_API_URL` từ `../backend/.env`, cùng file env với backend.
 
-```env
-VITE_API_URL=http://localhost:8000/api
+## Build production
+
+```bash
+npm run build
+npm run preview
 ```
-
-Nếu chưa có backend hoặc token đăng nhập, giao diện sẽ dùng dữ liệu mẫu để demo.
-Khi thành viên phụ trách Login lưu access token vào `localStorage` với key `access_token` hoặc `accessToken`, frontend sẽ tự gọi API thật.
