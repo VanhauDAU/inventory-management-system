@@ -5,13 +5,28 @@ from rest_framework import serializers
 from categories.serializers import CategorySerializer
 from suppliers.serializers import SupplierSerializer
 
-from .models import Product
+from .models import Product, ProductImage
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = [
+            "id",
+            "image",
+            "alt_text",
+            "is_primary",
+            "sort_order",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
 
 
 class ProductSerializer(serializers.ModelSerializer):
     category_detail = CategorySerializer(source="category", read_only=True)
     supplier_detail = SupplierSerializer(source="supplier", read_only=True)
     supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
     price = serializers.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -28,6 +43,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "name",
             "description",
             "image",
+            "images",
             "price",
             "cost_price",
             "selling_price",
@@ -69,5 +85,13 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        gallery_images = representation.get("images") or []
+        if gallery_images:
+            primary_image = next(
+                (image for image in gallery_images if image.get("is_primary")),
+                gallery_images[0],
+            )
+            representation["image"] = primary_image.get("image") or representation.get("image")
+            representation["thumbnail"] = representation["image"]
         representation["price"] = representation["selling_price"]
         return representation

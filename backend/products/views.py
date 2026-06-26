@@ -3,16 +3,22 @@ from django.db import models
 from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
-from rest_framework import filters, parsers, status, viewsets
+from rest_framework import filters, parsers, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from accounts.permissions import ViewDjangoModelPermissions
 from inventory.models import StockTransactionItem
 from inventory.serializers import StockTransactionItemSerializer
 
-from .models import Product
+from .models import Product, ProductImage
 from .serializers import ProductSerializer
+
+
+MAX_PRODUCT_IMAGES = 8
+MAX_PRODUCT_IMAGE_SIZE = 5 * 1024 * 1024
+PRODUCT_IMAGE_UPLOAD_FIELDS = ("uploaded_images", "images")
 
 
 class ProductOrderingFilter(filters.OrderingFilter):
@@ -65,18 +71,25 @@ class ProductFilter(django_filters.FilterSet):
         summary="Create product",
         description=(
             "Create a product. Supports multipart/form-data for image upload. "
-            "SKU is generated automatically when omitted."
+            "Send multiple files with the uploaded_images field. SKU is generated "
+            "automatically when omitted."
         ),
     ),
     update=extend_schema(
         tags=["Products"],
         summary="Replace product",
-        description="Replace all editable product fields. Supports multipart/form-data for image upload.",
+        description=(
+            "Replace all editable product fields. Supports multipart/form-data "
+            "for image upload, including multiple uploaded_images files."
+        ),
     ),
     partial_update=extend_schema(
         tags=["Products"],
         summary="Update product",
-        description="Partially update product fields. Supports multipart/form-data for image upload.",
+        description=(
+            "Partially update product fields. Supports multipart/form-data for "
+            "image upload, including multiple uploaded_images files."
+        ),
     ),
     destroy=extend_schema(
         tags=["Products"],
@@ -92,7 +105,12 @@ class ProductFilter(django_filters.FilterSet):
     ),
 )
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category", "supplier").all().order_by("id")
+    queryset = (
+        Product.objects.select_related("category", "supplier")
+        .prefetch_related("images")
+        .all()
+        .order_by("id")
+    )
     serializer_class = ProductSerializer
     permission_classes = [ViewDjangoModelPermissions]
     parser_classes = [parsers.JSONParser, parsers.MultiPartParser, parsers.FormParser]
@@ -115,6 +133,85 @@ class ProductViewSet(viewsets.ModelViewSet):
         "created_at",
         "updated_at",
     ]
+
+    def _get_uploaded_images(self, request):
+        uploaded_images = []
+        for field_name in PRODUCT_IMAGE_UPLOAD_FIELDS:
+            uploaded_images.extend(request.FILES.getlist(field_name))
+        return uploaded_images
+
+    def _validate_uploaded_images(self, uploaded_images):
+        if not uploaded_images:
+            return
+
+        if len(uploaded_images) > MAX_PRODUCT_IMAGES:
+            raise ValidationError(
+                {
+                    "images": (
+                        f"Chỉ được upload tối đa {MAX_PRODUCT_IMAGES} ảnh cho một sản phẩm."
+                    )
+                }
+            )
+
+        image_field = serializers.ImageField()
+        for uploaded_image in uploaded_images:
+            if uploaded_image.size > MAX_PRODUCT_IMAGE_SIZE:
+                raise ValidationError(
+                    {"images": "Mỗi ảnh sản phẩm không được vượt quá 5MB."}
+                )
+
+            image_field.run_validation(uploaded_image)
+            if hasattr(uploaded_image, "seek"):
+                uploaded_image.seek(0)
+
+    def _replace_product_images(self, product, uploaded_images):
+        if not uploaded_images:
+            return
+
+        for existing_image in product.images.all():
+            if existing_image.image:
+                existing_image.image.delete(save=False)
+            existing_image.delete()
+
+        for index, uploaded_image in enumerate(uploaded_images):
+            ProductImage.objects.create(
+                product=product,
+                image=uploaded_image,
+                alt_text=product.name,
+                is_primary=index == 0,
+                sort_order=index,
+            )
+
+    def create(self, request, *args, **kwargs):
+        uploaded_images = self._get_uploaded_images(request)
+        self._validate_uploaded_images(uploaded_images)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+        self._replace_product_images(product, uploaded_images)
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            self.get_serializer(product).data,
+            status=status.HTTP_201_CREATED,
+            headers=headers,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        uploaded_images = self._get_uploaded_images(request)
+        self._validate_uploaded_images(uploaded_images)
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+        self._replace_product_images(product, uploaded_images)
+
+        if getattr(product, "_prefetched_objects_cache", None):
+            product._prefetched_objects_cache = {}
+
+        return Response(self.get_serializer(product).data)
 
     def destroy(self, request, *args, **kwargs):
         product = self.get_object()

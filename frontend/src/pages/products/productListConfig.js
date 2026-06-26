@@ -11,6 +11,12 @@ export const createProductFormData = (payload) => {
 
   Object.entries(payload).forEach(([key, value]) => {
     if (value === undefined) return
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        if (item !== undefined) formData.append(key, item === null ? '' : item)
+      })
+      return
+    }
     formData.append(key, value === null ? '' : value)
   })
 
