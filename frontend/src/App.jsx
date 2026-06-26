@@ -165,6 +165,18 @@ export default function App() {
     setIsDemoMode(true)
   }
 
+  // Điều hướng trang và hỏi xác nhận nếu đăng xuất
+  function handleNavigate(pageKey) {
+    if (pageKey === 'system-logout') {
+      const confirmLogout = window.confirm('Bạn có chắc chắn muốn đăng xuất không?')
+      if (confirmLogout) {
+        handleLogout()
+      }
+    } else {
+      setActivePage(pageKey)
+    }
+  }
+
   useEffect(() => {
     if (!isLoggedIn) return
 
@@ -196,14 +208,14 @@ export default function App() {
   return (
     <AppLayout
       activePage={activePage}
-      onNavigate={setActivePage}
+      onNavigate={handleNavigate}
       isDemoMode={isDemoMode}
       apiUrl={apiUrl}
       currentUser={currentUser}
       authReady={authReady}
     >
       {renderPage(activePage, {
-        onNavigate: setActivePage,
+        onNavigate: handleNavigate,
         stats,
         onStatsChange: handleStatsChange,
         onLogout: handleLogout,
