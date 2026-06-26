@@ -1,13 +1,21 @@
+import base64
+import tempfile
 from decimal import Decimal
 
 from django.contrib.auth.models import Permission, User
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from categories.models import Category
 from inventory.models import StockTransaction, StockTransactionItem, Warehouse
 
-from .models import Product
+from .models import Product, ProductImage
+
+
+SMALL_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+)
 
 
 class ProductAPITests(APITestCase):
@@ -20,6 +28,9 @@ class ProductAPITests(APITestCase):
             *Permission.objects.filter(content_type__app_label__in=["products", "inventory"])
         )
         self.category = Category.objects.create(name="Electronics")
+
+    def make_test_image(self, name):
+        return SimpleUploadedFile(name, SMALL_PNG, content_type="image/png")
 
     def test_product_api_requires_authentication(self):
         response = self.client.get("/api/products/")
@@ -63,6 +74,35 @@ class ProductAPITests(APITestCase):
         delete_response = self.client.delete(f"/api/products/{product_id}/")
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Product.objects.filter(id=product_id).exists())
+
+    def test_authenticated_user_can_upload_multiple_product_images(self):
+        self.client.force_authenticate(user=self.user)
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with self.settings(MEDIA_ROOT=media_root):
+                response = self.client.post(
+                    "/api/products/",
+                    {
+                        "name": "Camera",
+                        "description": "Camera with gallery",
+                        "selling_price": "199.99",
+                        "category": self.category.id,
+                        "uploaded_images": [
+                            self.make_test_image("front.png"),
+                            self.make_test_image("back.png"),
+                        ],
+                    },
+                    format="multipart",
+                )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data["images"]), 2)
+        self.assertEqual(response.data["images"][0]["is_primary"], True)
+        self.assertIn("/media/products/gallery/", response.data["image"])
+        self.assertEqual(
+            ProductImage.objects.filter(product_id=response.data["id"]).count(),
+            2,
+        )
 
     def test_authenticated_user_can_filter_products_by_category(self):
         self.client.force_authenticate(user=self.user)

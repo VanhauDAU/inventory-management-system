@@ -83,5 +83,6 @@ urlpatterns = [
     path("api/", include(router.urls)),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Product images are public media uploaded by authenticated staff. Render runs
+# with DEBUG=False, so expose MEDIA_URL explicitly for this small deployment.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

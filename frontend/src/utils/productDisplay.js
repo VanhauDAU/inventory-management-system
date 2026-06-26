@@ -6,6 +6,14 @@ export const getCategoryName = (product) =>
 export const getSupplierName = (product) =>
   product?.supplier_detail?.name || product?.supplier_name || (product?.supplier ? `NCC #${product.supplier}` : 'Chưa gán')
 
+export const getProductImages = (product) => {
+  const galleryImages = Array.isArray(product?.images)
+    ? product.images.map((item) => item?.image).filter(Boolean)
+    : []
+  const legacyImages = [product?.image, product?.image_url, product?.thumbnail].filter(Boolean)
+  return Array.from(new Set([...galleryImages, ...legacyImages]))
+}
+
 const productImageMap = {
   1: '/product-images/laptop.svg',
   2: '/product-images/keyboard.svg',
@@ -26,7 +34,7 @@ const categoryImageMap = {
 export const getProductImage = (product) => {
   const categoryName = getCategoryName(product)
   return (
-    product?.image || product?.image_url || product?.thumbnail ||
+    getProductImages(product)[0] ||
     productImageMap[Number(product?.id)] ||
     categoryImageMap[categoryName] ||
     productImageMap.default

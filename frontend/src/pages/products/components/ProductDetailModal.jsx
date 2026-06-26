@@ -3,6 +3,7 @@ import {
   getBusinessStatus,
   getCategoryName,
   getProductImage,
+  getProductImages,
   getProductPrice,
   getStockStatus,
   getSupplierName,
@@ -11,6 +12,7 @@ import {
 
 export default function ProductDetailModal({ canChange, onClose, onEdit, product }) {
   if (!product) return null
+  const productImages = getProductImages(product)
 
   return (
     <div className="plp-modal-backdrop" role="presentation" onClick={onClose}>
@@ -26,6 +28,15 @@ export default function ProductDetailModal({ canChange, onClose, onEdit, product
         <div className="plp-detail-layout">
           <div className="plp-detail-media">
             <img src={getProductImage(product)} alt={product.name} />
+            {productImages.length > 1 && (
+              <div className="plp-detail-gallery" aria-label="Ảnh sản phẩm">
+                {productImages.map((image, index) => (
+                  <div className="plp-detail-gallery-item" key={`${image}-${index}`}>
+                    <img src={image} alt={`${product.name} ${index + 1}`} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="plp-detail-summary">

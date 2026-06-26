@@ -149,6 +149,8 @@ Các field quan trọng:
 | `sku` | Mã sản phẩm, unique, có thể tự sinh nếu không gửi |
 | `barcode` | Mã barcode, unique, có thể rỗng |
 | `name` | Tên sản phẩm |
+| `image` | Ảnh đại diện trả về để tương thích UI cũ |
+| `images` | Danh sách ảnh gallery của sản phẩm |
 | `category` | Danh mục |
 | `supplier` | Nhà cung cấp |
 | `cost_price` | Giá nhập |
@@ -162,9 +164,18 @@ Luồng tạo sản phẩm:
 
 1. Người dùng chọn danh mục.
 2. Người dùng chọn nhà cung cấp nếu có.
-3. Người dùng nhập tên, giá nhập, giá bán, tồn kho ban đầu.
+3. Người dùng nhập tên, giá nhập, giá bán, ngưỡng tồn và các thông tin phân loại.
 4. Nếu không nhập `sku`, backend tự sinh mã dạng `PRD-...`.
-5. Product được lưu vào database.
+5. Nếu chọn ảnh, frontend gửi `multipart/form-data` với nhiều field `uploaded_images`.
+6. Product được lưu vào database.
+7. Backend lưu gallery vào bảng `product_images`; ảnh đầu tiên là ảnh đại diện.
+
+Quy định upload ảnh:
+
+- Field upload: `uploaded_images`.
+- Tối đa 8 ảnh cho một sản phẩm.
+- Mỗi ảnh tối đa 5MB.
+- Nếu cập nhật sản phẩm và gửi ảnh mới, gallery cũ được thay bằng gallery mới.
 
 Tìm kiếm, lọc, sắp xếp:
 

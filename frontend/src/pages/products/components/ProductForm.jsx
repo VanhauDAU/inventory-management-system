@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getCategories, getSuppliers } from '../../../services/productService'
+import { getProductImages } from '../../../utils/productDisplay'
 import {
   ProductClassificationSection,
   ProductIdentitySection,
@@ -19,6 +20,7 @@ const unitOptions = [
 ]
 
 const maxImageSize = 5 * 1024 * 1024
+const maxImageCount = 8
 const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 const onlyDigits = (value) => String(value ?? '').replace(/\D/g, '')
@@ -61,8 +63,8 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
   const [suppliers, setSuppliers] = useState([])
   const [catLoading, setCatLoading] = useState(true)
   const [supplierLoading, setSupplierLoading] = useState(true)
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(initialData?.image || '')
+  const [imageFiles, setImageFiles] = useState([])
+  const [imagePreviews, setImagePreviews] = useState(() => getProductImages(initialData))
 
   // Nếu sửa thì điền sẵn dữ liệu
   useEffect(() => {
@@ -80,8 +82,8 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
         category: initialData.category || '',
         supplier: initialData.supplier || '',
       })
-      setImageFile(null)
-      setImagePreview(initialData.image || '')
+      setImageFiles([])
+      setImagePreviews(getProductImages(initialData))
     }
   }, [initialData])
 
@@ -109,9 +111,11 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
 
   useEffect(() => {
     return () => {
-      if (imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview)
+      imagePreviews.forEach((preview) => {
+        if (preview.startsWith('blob:')) URL.revokeObjectURL(preview)
+      })
     }
-  }, [imagePreview])
+  }, [imagePreviews])
 
   const validate = () => {
     const newErrors = {}
@@ -132,12 +136,18 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       newErrors.description = 'Mô tả không được vượt quá 2000 ký tự'
     }
 
-    if (!imageFile && !imagePreview) {
-      newErrors.image = 'Vui lòng chọn ảnh sản phẩm'
-    } else if (imageFile && !allowedImageTypes.includes(imageFile.type)) {
-      newErrors.image = 'Ảnh phải có định dạng JPG, PNG, WEBP hoặc GIF'
-    } else if (imageFile && imageFile.size > maxImageSize) {
-      newErrors.image = 'Ảnh không được vượt quá 5MB'
+    if (imageFiles.length === 0 && imagePreviews.length === 0) {
+      newErrors.image = 'Vui lòng chọn ít nhất một ảnh sản phẩm'
+    } else if (imageFiles.length > maxImageCount) {
+      newErrors.image = `Chỉ được chọn tối đa ${maxImageCount} ảnh`
+    } else {
+      const invalidTypeFile = imageFiles.find((file) => !allowedImageTypes.includes(file.type))
+      const oversizedFile = imageFiles.find((file) => file.size > maxImageSize)
+      if (invalidTypeFile) {
+        newErrors.image = 'Ảnh phải có định dạng JPG, PNG, WEBP hoặc GIF'
+      } else if (oversizedFile) {
+        newErrors.image = 'Mỗi ảnh không được vượt quá 5MB'
+      }
     }
 
     if (onlyDigits(form.selling_price) === '') {
@@ -184,16 +194,16 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
   }
 
   const handleImageChange = (e) => {
-    const file = e.target.files?.[0] || null
-    setImageFile(file)
+    const files = Array.from(e.target.files || [])
+    setImageFiles(files)
     if (errors.image) setErrors((prev) => ({ ...prev, image: '' }))
 
-    if (!file) {
-      setImagePreview(initialData?.image || '')
+    if (files.length === 0) {
+      setImagePreviews(getProductImages(initialData))
       return
     }
 
-    setImagePreview(URL.createObjectURL(file))
+    setImagePreviews(files.map((file) => URL.createObjectURL(file)))
   }
 
   const handleSubmit = (e) => {
@@ -207,7 +217,7 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       barcode: form.barcode.trim() || null,
       name: form.name.trim(),
       description: form.description.trim(),
-      ...(imageFile ? { image: imageFile } : {}),
+      ...(imageFiles.length > 0 ? { uploaded_images: imageFiles } : {}),
       cost_price: form.cost_price === '' ? 0 : parseMoneyInput(form.cost_price),
       selling_price: parseMoneyInput(form.selling_price),
       price: parseMoneyInput(form.selling_price),
@@ -226,8 +236,8 @@ function ProductForm({ initialData = null, onSubmit, onCancel, loading = false }
       <div className="form-layout">
         <ProductImageField
           error={errors.image}
-          imageFile={imageFile}
-          imagePreview={imagePreview}
+          imageFiles={imageFiles}
+          imagePreviews={imagePreviews}
           isEdit={isEdit}
           onImageChange={handleImageChange}
         />

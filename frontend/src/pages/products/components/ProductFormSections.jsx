@@ -1,19 +1,31 @@
 export function ProductImageField({
   error,
-  imageFile,
-  imagePreview,
+  imageFiles,
+  imagePreviews,
   isEdit,
   onImageChange,
 }) {
+  const primaryPreview = imagePreviews[0]
+  const selectedFileNames = imageFiles.map((file) => file.name)
+
   return (
     <aside className="form-image-panel">
       <div className="image-preview">
-        {imagePreview ? (
-          <img src={imagePreview} alt="Xem trước sản phẩm" />
+        {primaryPreview ? (
+          <img src={primaryPreview} alt="Xem trước sản phẩm" />
         ) : (
           <span>Chưa chọn ảnh</span>
         )}
       </div>
+      {imagePreviews.length > 1 && (
+        <div className="image-preview-grid" aria-label="Danh sách ảnh đã chọn">
+          {imagePreviews.map((preview, index) => (
+            <div className="image-preview-thumb" key={`${preview}-${index}`}>
+              <img src={preview} alt={`Ảnh sản phẩm ${index + 1}`} />
+            </div>
+          ))}
+        </div>
+      )}
       <label className="form-label">
         Ảnh sản phẩm {!isEdit && <span className="required">*</span>}
       </label>
@@ -21,12 +33,20 @@ export function ProductImageField({
         <input
           type="file"
           accept="image/png,image/jpeg,image/webp,image/gif"
+          multiple
           onChange={onImageChange}
         />
         <span>Chọn ảnh từ máy</span>
       </label>
-      <small className="image-help">JPG, PNG, WEBP hoặc GIF. Tối đa 5MB.</small>
-      {imageFile && <small className="image-filename">{imageFile.name}</small>}
+      <small className="image-help">JPG, PNG, WEBP hoặc GIF. Tối đa 8 ảnh, mỗi ảnh 5MB.</small>
+      {selectedFileNames.length > 0 && (
+        <div className="image-filename-list">
+          <small>{selectedFileNames.length} ảnh đã chọn</small>
+          {selectedFileNames.map((fileName) => (
+            <small className="image-filename" key={fileName}>{fileName}</small>
+          ))}
+        </div>
+      )}
       {error && <p className="error-msg">{error}</p>}
     </aside>
   )
