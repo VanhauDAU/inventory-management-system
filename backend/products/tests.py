@@ -1,6 +1,7 @@
 import base64
 import tempfile
 from decimal import Decimal
+from pathlib import Path
 
 from django.contrib.auth.models import Permission, User
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -103,6 +104,72 @@ class ProductAPITests(APITestCase):
             ProductImage.objects.filter(product_id=response.data["id"]).count(),
             2,
         )
+
+    def test_product_image_upload_rejects_too_many_images(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            "/api/products/",
+            {
+                "name": "Camera",
+                "selling_price": "199.99",
+                "category": self.category.id,
+                "uploaded_images": [
+                    self.make_test_image(f"image-{index}.png")
+                    for index in range(9)
+                ],
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Product.objects.filter(name="Camera").count(), 0)
+        self.assertIn("images", response.data)
+
+    def test_product_image_update_replaces_gallery_and_deletes_old_files(self):
+        self.client.force_authenticate(user=self.user)
+
+        with tempfile.TemporaryDirectory() as media_root:
+            with self.settings(MEDIA_ROOT=media_root):
+                create_response = self.client.post(
+                    "/api/products/",
+                    {
+                        "name": "Camera",
+                        "selling_price": "199.99",
+                        "category": self.category.id,
+                        "uploaded_images": [
+                            self.make_test_image("front.png"),
+                            self.make_test_image("back.png"),
+                        ],
+                    },
+                    format="multipart",
+                )
+
+                product_id = create_response.data["id"]
+                old_files = [
+                    Path(media_root) / image.image.name
+                    for image in ProductImage.objects.filter(product_id=product_id)
+                ]
+                self.assertTrue(all(path.exists() for path in old_files))
+
+                with self.captureOnCommitCallbacks(execute=True):
+                    update_response = self.client.patch(
+                        f"/api/products/{product_id}/",
+                        {
+                            "name": "Camera Pro",
+                            "uploaded_images": [self.make_test_image("new.png")],
+                        },
+                        format="multipart",
+                    )
+
+                self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+                self.assertEqual(update_response.data["name"], "Camera Pro")
+                self.assertEqual(len(update_response.data["images"]), 1)
+                self.assertEqual(
+                    ProductImage.objects.filter(product_id=product_id).count(),
+                    1,
+                )
+                self.assertTrue(all(not path.exists() for path in old_files))
 
     def test_authenticated_user_can_filter_products_by_category(self):
         self.client.force_authenticate(user=self.user)

@@ -42,7 +42,7 @@ npm run dev
 Backend:
 
 ```env
-DJANGO_SECRET_KEY=change-me
+DJANGO_SECRET_KEY=<generate-a-strong-random-secret>
 DJANGO_DEBUG=False
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
 CORS_ALLOWED_ORIGINS=http://localhost:3000
@@ -54,6 +54,12 @@ POSTGRES_PASSWORD=postgres
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 DJANGO_MEDIA_ROOT=/path/to/media
+```
+
+Không để trống `DJANGO_SECRET_KEY` và không dùng giá trị ví dụ cho production. Có thể tạo secret local bằng:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
 Frontend:
