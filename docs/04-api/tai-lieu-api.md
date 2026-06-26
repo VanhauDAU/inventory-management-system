@@ -108,14 +108,65 @@ GET /api/products/
 POST /api/products/
 ```
 
-Body:
+Body JSON tối thiểu:
 
 ```json
 {
   "name": "Keyboard",
   "description": "Mechanical keyboard",
+  "selling_price": "49.99",
+  "category": 1
+}
+```
+
+SKU được tự sinh nếu không gửi. `quantity` không cập nhật trực tiếp từ CRUD sản phẩm; tồn kho được cập nhật qua phiếu kho.
+
+Body `multipart/form-data` khi upload nhiều ảnh:
+
+```text
+name=Keyboard
+description=Mechanical keyboard
+selling_price=49.99
+cost_price=35.00
+minimum_stock=5
+unit=piece
+status=active
+category=1
+supplier=2
+uploaded_images=<file 1>
+uploaded_images=<file 2>
+```
+
+Quy định ảnh:
+
+- Field upload nhiều ảnh: `uploaded_images`.
+- Tối đa 8 ảnh cho một sản phẩm.
+- Mỗi ảnh tối đa 5MB.
+- Định dạng hợp lệ do `ImageField`/Pillow kiểm tra, frontend đang cho phép JPG, PNG, WEBP và GIF.
+- Ảnh đầu tiên được đặt làm ảnh đại diện.
+
+Response rút gọn:
+
+```json
+{
+  "id": 1,
+  "sku": "PRD-ABC123",
+  "name": "Keyboard",
+  "image": "http://localhost:8000/media/products/gallery/front.png",
+  "thumbnail": "http://localhost:8000/media/products/gallery/front.png",
+  "images": [
+    {
+      "id": 10,
+      "image": "http://localhost:8000/media/products/gallery/front.png",
+      "alt_text": "Keyboard",
+      "is_primary": true,
+      "sort_order": 0,
+      "created_at": "2026-06-26T00:00:00Z"
+    }
+  ],
+  "selling_price": "49.99",
   "price": "49.99",
-  "quantity": 12,
+  "quantity": 0,
   "category": 1
 }
 ```
@@ -136,15 +187,20 @@ Body:
 
 ```json
 {
-  "quantity": 8
+  "name": "Keyboard Pro",
+  "minimum_stock": 10
 }
 ```
+
+Cập nhật ảnh dùng `multipart/form-data` giống tạo mới. Nếu gửi `uploaded_images`, backend sẽ thay gallery hiện tại bằng danh sách ảnh mới.
 
 ### Xóa product
 
 ```http
 DELETE /api/products/{id}/
 ```
+
+Nếu sản phẩm đã được dùng trong phiếu kho hoặc dữ liệu nghiệp vụ có ràng buộc, API trả `409 Conflict`.
 
 ## Search, filter, ordering
 

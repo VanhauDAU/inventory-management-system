@@ -21,7 +21,7 @@ Hệ thống quản lý sản phẩm và tồn kho được xây dựng theo mô
 
 ### Quản lý nghiệp vụ
 
-- Quản lý sản phẩm, SKU, barcode, hình ảnh, giá nhập, giá bán và trạng thái.
+- Quản lý sản phẩm, SKU, barcode, nhiều hình ảnh, giá nhập, giá bán và trạng thái.
 - Quản lý danh mục nhiều cấp và nhà cung cấp.
 - Quản lý kho và số lượng tồn của từng sản phẩm theo kho.
 - Tạo phiếu nhập, xuất và điều chỉnh kho.
@@ -292,6 +292,29 @@ Luồng deploy nhanh:
 Backend build bằng `backend/build.sh`, sau đó `startCommand` chạy migration, tạo superuser nếu có env, rồi start bằng Gunicorn. Cách này dùng được với Render free tier vì không cần `preDeployCommand`. Frontend build bằng `npm ci && npm run build` và publish thư mục `frontend/dist`.
 Backend được pin Python 3.12 trên Render để khớp Dockerfile và CI.
 
+### Lưu trữ ảnh upload trên Render
+
+Sản phẩm hỗ trợ upload nhiều ảnh. API lưu ảnh vào `MEDIA_ROOT` và trả URL dạng `/media/...`.
+
+Khi chạy production trên Render, backend được cấu hình expose `MEDIA_URL` để trình duyệt tải được ảnh upload. Tuy nhiên filesystem mặc định của Render là tạm thời; ảnh có thể mất sau restart hoặc redeploy nếu không dùng storage bền vững.
+
+Khuyến nghị khi deploy thật:
+
+1. Gắn Persistent Disk cho service `inventory-management-api`.
+2. Mount disk vào thư mục media, ví dụ:
+
+```text
+/opt/render/project/src/backend/media
+```
+
+3. Thêm biến môi trường cho backend:
+
+```env
+DJANGO_MEDIA_ROOT=/opt/render/project/src/backend/media
+```
+
+Nếu dùng S3, Cloudinary hoặc storage ngoài khác trong tương lai, thay phần lưu media cục bộ bằng storage backend tương ứng.
+
 ## Tài khoản và xác thực
 
 Tạo tài khoản quản trị:
@@ -365,6 +388,8 @@ PUT    /api/products/{id}/
 PATCH  /api/products/{id}/
 DELETE /api/products/{id}/
 ```
+
+Tạo hoặc cập nhật sản phẩm có thể gửi `multipart/form-data`. Trường `uploaded_images` nhận nhiều file, tối đa 8 ảnh, mỗi ảnh tối đa 5MB. API vẫn trả `image` làm ảnh đại diện và trả thêm mảng `images` cho gallery.
 
 Ví dụ tìm kiếm và lọc sản phẩm:
 

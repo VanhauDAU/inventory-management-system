@@ -316,12 +316,24 @@ Model `Product`:
 - `unit`.
 - `status`: `active`, `inactive`, `discontinued`.
 
+Model `ProductImage`:
+
+- `product`: FK toi `Product`, `related_name="images"`.
+- `image`: file anh gallery trong `products/gallery/`.
+- `alt_text`.
+- `is_primary`: anh dai dien.
+- `sort_order`: thu tu hien thi.
+- `created_at`.
+
 Serializer:
 
 - `category_detail`, `supplier_detail`, `supplier_name` la read-only.
+- `images` la danh sach anh gallery read-only.
 - Field legacy `price` map sang `selling_price`.
+- Response van tra `image`/`thumbnail` la anh dai dien de tuong thich UI cu.
 - Khi tao san pham neu khong co `sku`, backend tu sinh dang `PRD-...`.
 - `quantity` read-only, chi phieu kho moi cap nhat quantity.
+- Upload nhieu anh dung `multipart/form-data` voi field `uploaded_images`, toi da 8 anh, moi anh toi da 5MB.
 
 Filter/search/order:
 
@@ -560,7 +572,7 @@ Tao/sua san pham:
 2. `ProductForm` validate input, anh, gia, danh muc, supplier.
 3. `createProductFormData()` build `FormData`.
 4. `authJson('/products/', method POST)` hoac `PATCH /products/{id}/`.
-5. Backend luu product va image.
+5. Backend luu product va gallery `ProductImage` neu co `uploaded_images`.
 6. Frontend refresh list va toast success.
 
 Xoa san pham:
@@ -711,11 +723,12 @@ LoginPage
 ProductListPage
   -> ProductFormModal
   -> ProductForm validate
-  -> FormData image + fields
+  -> FormData uploaded_images[] + fields
   -> POST /api/products/
   -> ProductSerializer validate
   -> auto SKU neu thieu
   -> save Product
+  -> save ProductImage gallery neu co file upload
   -> frontend refresh products
 ```
 
@@ -906,6 +919,7 @@ Backend:
 - Migration duoc dat trong `startCommand` de dung duoc voi Render free tier, vi free tier khong ho tro pre-deploy command.
 - `PYTHON_VERSION=3.12.11`
 - `DATABASE_URL` lay tu Render Postgres.
+- `DJANGO_MEDIA_ROOT` co the tro toi Render Persistent Disk de giu anh upload.
 
 Frontend:
 
@@ -918,6 +932,12 @@ Can cap nhat sau khi co domain that:
 
 - Backend `CORS_ALLOWED_ORIGINS`.
 - Frontend `VITE_API_URL`.
+
+Media upload tren Render:
+
+- Backend expose `/media/` ca khi `DJANGO_DEBUG=False` de anh upload hien thi duoc.
+- Filesystem mac dinh cua Render la tam thoi, nen anh co the mat sau restart/redeploy neu khong gan Persistent Disk.
+- Nen mount disk vao `/opt/render/project/src/backend/media` va set `DJANGO_MEDIA_ROOT=/opt/render/project/src/backend/media`.
 
 ## 11. Testing Va Chat Luong
 
@@ -970,7 +990,7 @@ CI GitHub Actions:
   - update test.
 - File env that la `backend/.env`, khong tao them `.env` o root/frontend.
 - `backend/.env.example` chi nen co key rong.
-- Cac file image upload nam trong `backend/media/` local va khong commit.
+- Cac file image upload nam trong `backend/media/` local hoac `DJANGO_MEDIA_ROOT` production va khong commit.
 - `frontend/dist/`, `node_modules/`, `backend/staticfiles/`, cache Python khong commit.
 
 ## 13. Ban Do File Nhanh
